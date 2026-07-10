@@ -41,6 +41,32 @@ a Raspberry Pi 5.
 | **Latency** | **5.05 FPS** on Raspberry Pi 5 CPU · **27.2 FPS** on Hailo-8L NPU (target: ≥ 5 FPS) |
 | **Key finding** | A Pix2Pix baseline matching the student on **PSNR/SSIM recovers almost none** of the downstream behaviour — feature-space supervision and behaviour-centred evaluation, *not* pixel fidelity, are what make a translation pre-processor useful |
 
+## The capture rig
+
+Supervising a translator needs NIR and RGB of the **same scene at the same instant**. A
+custom, hand-built rig splits one optical path with a beam-splitter cube onto two
+Raspberry Pi cameras — one behind an 850 nm long-pass filter (NIR), one unfiltered (RGB) —
+all inside a 3D-printed case. Carried around London, it captured **12,536** simultaneous
+pairs.
+
+<table>
+<tr>
+<td width="50%"><img src="imgs/device-labeled.png" alt="Annotated internals of the capture rig" width="100%"></td>
+<td width="50%"><img src="imgs/rig-deployed.jpg" alt="The rig deployed on a backpack during a capture walk" width="100%"></td>
+</tr>
+<tr>
+<td align="center"><em>Internals: beam-splitter cube, 850 nm NIR camera, RGB camera, 3D-printed case.</em></td>
+<td align="center"><em>Deployed in the field — capturing paired data on the move around London.</em></td>
+</tr>
+</table>
+
+After capture, pairs are blur-filtered and **SIFT/RANSAC homography-aligned** so NIR and RGB
+share a pixel grid:
+
+<div align="center">
+<img src="NIR-RGB/docs/figures/dataset_pixel_pairs.png" alt="Aligned NIR/RGB training pairs, left half NIR and right half RGB" width="90%">
+</div>
+
 ## Repository layout
 
 ```
@@ -76,6 +102,22 @@ final-report/
    No colour, wrong           Trained to preserve            Works as if it were
    material appearance        *downstream behaviour*         looking at real RGB
 ```
+
+## Results
+
+**Translation quality** — raw NIR → translated RGB → ground-truth RGB (per-pair PSNR shown):
+
+<div align="center">
+<img src="imgs/grid_22.png" alt="Raw NIR, l1boost translation, and ground-truth RGB across three street scenes" width="80%">
+</div>
+
+**What actually matters** — how much of each *frozen* RGB model's native behaviour the
+translation recovers. Blue (translated RGB) beats grey (raw NIR) on detection (YOLO,
+Mask R-CNN), segmentation (DeepLab), depth (MiDaS), and embeddings (ResNet-50):
+
+<div align="center">
+<img src="NIR-RGB/docs/figures/downstream_gap_closure.png" alt="Downstream gap closure: translated RGB vs raw NIR across eight frozen models" width="85%">
+</div>
 
 ## Method, briefly
 
