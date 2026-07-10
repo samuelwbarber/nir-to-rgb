@@ -1,0 +1,7 @@
+# Optional deps for the downstream evaluation harness.
+# Install on top of requirements.txt: pip install -r requirements-eval.txt
+# Each evaluator imports its dep lazily, so you can install only what you need.
+
+mediapipe>=0.10.0          # mp_hands, mp_face, mp_pose, mp_selfie
+ultralytics>=8.1.0         # yolo
+timm>=0.9.0                # midas (MiDaS depends on timm via torch.hub)

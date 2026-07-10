@@ -1,0 +1,111 @@
+project:
+  name: nir2rgb
+  experiment: phase4_student_nafnet24_distill
+  output_dir: experiments
+data:
+  nir_dir: data/nir
+  rgb_dir: data/rgb
+  mp_cache: data/mp_cache.json
+  extensions:
+  - .png
+  - .jpg
+  - .jpeg
+  - .tif
+  - .tiff
+  image_size: 256
+  in_channels: 3
+  out_channels: 3
+split:
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  seed: 42
+  scene_regex: null
+augment:
+  hflip: true
+  rotate_max_deg: 10.0
+  scale_min: 0.9
+  scale_max: 1.15
+  nir_brightness: 0.2
+  nir_gamma_min: 0.8
+  nir_gamma_max: 1.2
+# Student — small NAFNet for Pi 5 CPU (ONNX Runtime / XNNPACK target).
+# width=24, blocks [1,1,2,2]/mid 4. ~4-5 M params vs. teacher's ~116 M.
+model:
+  generator:
+    type: nafnet
+    width: 24
+    enc_blk_nums:
+    - 1
+    - 1
+    - 2
+    - 2
+    middle_blk_num: 4
+    dec_blk_nums:
+    - 1
+    - 1
+    - 1
+    - 1
+    dropout: 0.0
+    global_residual: false
+    output_tanh: true
+# Distillation source — frozen teacher from phase 3.
+distill:
+  teacher_checkpoint: experiments/phase3_teacher_nafnet64_smartcrop_fp32/checkpoints/epoch_0060.pth
+  teacher:
+    type: nafnet
+    width: 64
+    enc_blk_nums:
+    - 2
+    - 2
+    - 4
+    - 8
+    middle_blk_num: 12
+    dec_blk_nums:
+    - 2
+    - 2
+    - 2
+    - 2
+    dropout: 0.0
+    global_residual: false
+    output_tanh: true
+loss:
+  # KD pixel: how much to follow the teacher's RGB output.
+  # GT L1: how much to anchor against ground truth (prevents drift if teacher
+  # has artefacts on a sample). Start with KD dominant since teacher is the
+  # quality target we're trying to approximate cheaply.
+  kd_pixel_weight: 100.0
+  gt_l1_weight: 25.0
+  perceptual_weight: 10.0
+  msssim_weight: 3.0
+  kd_perceptual_weight: 0.0   # turn on later (e.g. 5.0) if textures look smeared
+  perceptual_layers:
+  - 3
+  - 8
+  - 15
+  - 22
+optim:
+  generator:
+    lr: 0.0002
+    betas:
+    - 0.9
+    - 0.999
+train:
+  batch_size: 8
+  num_workers: 4
+  epochs: 200
+  amp: false
+  log_interval: 50
+  val_interval_epochs: 1
+  save_interval_epochs: 1
+  keep_last_checkpoints: 5
+  sample_count: 8
+  grad_clip: 1.0
+  resume: latest
+eval:
+  metrics:
+  - psnr
+  - ssim
+  - lpips
+  lpips_net: alex
+device: cuda

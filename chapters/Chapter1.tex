@@ -1,0 +1,59 @@
+\doublespacing % Do not change - required
+
+\chapter{Introduction}
+\label{ch:introduction}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% IMPORTANT
+\begin{spacing}{1} %THESE FOUR
+\minitoc % LINES MUST APPEAR IN
+\end{spacing} % EVERY
+\thesisspacing % CHAPTER
+% COPY THEM IN ANY NEW CHAPTER
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Motivation}
+\label{sec:intro_motivation}
+
+While working on industrial ML deployments, I repeatedly encountered the same problem. Standard pretrained vision models fail on near-infrared (NIR) sensor input, and retraining at scale is impractical, so this project builds a translation layer that lets the unmodified models run on NIR input instead.
+
+NIR imaging captures information beyond the visible spectrum and is now standard in biometrics, agriculture, surveillance, autonomous driving and industrial inspection (see Chapter~\ref{ch:background}). Many of these applications would benefit from running general-purpose computer vision models directly on NIR data. The problem is that the dominant vision toolchain of object detectors, segmentation networks, classifiers and depth estimators is trained almost entirely on visible-band RGB imagery. These models usually degrade badly on NIR input: filters tuned for colour gradients barely respond to grayscale-like NIR, and features built on visible colour and material statistics no longer hold.
+
+A practical remedy is to insert a learned NIR$\rightarrow$RGB translator between the NIR sensor and the off-the-shelf RGB model. If the translator produces RGB-like images that preserve scene semantics, the downstream model can be reused without retraining. 
+
+\section{Objectives}
+\label{sec:intro_objectives}
+
+This project investigates whether a NIR$\rightarrow$RGB translator can be trained and deployed on a constrained edge device while preserving sufficient downstream task performance to be useful as a pre-processing stage for RGB-pretrained models. The specific objectives are:
+
+\begin{itemize}
+    \item \textbf{Dataset.} Collect a paired NIR/RGB dataset of representative real-world scenes, with sufficient geometric alignment that supervised image-to-image translation is well-posed.
+    \item \textbf{Translator model.} Train a NIR$\rightarrow$RGB translator that produces images compatible with the input distribution of pretrained RGB models. The aim is semantic preservation measured by downstream RGB-trained models, rather than photorealism for human viewers.
+    \item \textbf{Edge deployment.} Export the trained translator to a compact form (quantised to 8-bit integers, INT8) that runs at interactive frame rates on a Raspberry Pi~5 (target $\sim$5 frames per second, FPS).
+    \item \textbf{Downstream evaluation.} Evaluate the translator with standard image-quality metrics (Peak Signal-to-Noise Ratio, PSNR; Structural Similarity Index Measure, SSIM; and Learned Perceptual Image Patch Similarity, LPIPS~\cite{zhang2018lpips}) and, more importantly, with a downstream harness that measures how much of the NIR$\rightarrow$RGB performance gap is closed for each pretrained task (\textit{gap closure}, defined in Section~\ref{sec:design_evaluation} and reported in Chapter~\ref{ch:results}).
+\end{itemize}
+
+\section{Challenges}
+\label{sec:intro_challenges}
+
+NIR-to-RGB translation differs from typical image-to-image translation in a few important ways. The mapping is one-to-many: many plausible RGB appearances fit the same NIR observation, because the NIR input carries no colour. A deterministic translator must therefore commit to one colourisation, biased by its training data. Material responses in NIR also differ from visible reflectance, as water absorbs, chlorophyll reflects and skin looks smoother, so the network has to recover colour from material cues rather than copy texture.
+
+Producing paired training data is also hard. Two cameras separated by a baseline cannot share an optical centre, so parallax rules out a single global warp that aligns every depth at once. This project reduces that problem optically: a beam-splitter cube feeds both cameras through a shared aperture, allowing a per-pair homography instead of full stereo calibration (Chapter~\ref{ch:implementation}). 
+
+On the deployment side, the target device imposes strict latency, memory and operator-support constraints. A translator that trains cleanly in full-precision PyTorch on a desktop GPU may not necessarily export cleanly to the Open Neural Network Exchange (ONNX) format, tolerate INT8 quantisation or fit the operator set available on the Raspberry~Pi~5 runtime. These constraints motivated the choice of a model family with predictable operator support and a clear teacher-to-student distillation path.
+
+\section{Contributions}
+\label{sec:intro_contributions}
+
+This report contributes:
+\begin{enumerate}
+    \item A paired NIR/RGB capture pipeline: a beam-splitter co-axial rig (two Camera Module~3 sensors, one behind an 850\,nm long-pass filter, on a Raspberry~Pi~5) and a SIFT$+$RANSAC homography alignment pipeline, yielding 12{,}536 homography-aligned pairs (Chapter~\ref{ch:implementation}).
+    \item A NAFNet NIR$\rightarrow$RGB teacher trained with a \emph{foundation-model feature-matching ensemble} (DINOv2~\cite{oquab2024dinov2}, CLIP~\cite{radford2021clip}, ResNet-50~\cite{he2016resnet}), added to pixel, structural and lightweight adversarial terms in place of the single VGG perceptual term (Chapter~\ref{ch:implementation}).
+    \item An export and mixed-INT8 quantisation path from PyTorch to ONNX, LiteRT and a Hailo-8L HEF for a distilled edge student deployed on the Raspberry~Pi~5, benchmarked at 5.05\,FPS (model-inference) on the CPU and 27.2\,FPS on the Hailo-8L neural processing unit (NPU), both meeting the interactive target (Chapter~\ref{ch:implementation}).
+    \item A task-agnostic downstream evaluation harness spanning YOLOv8m~\cite{jocher2023yolov8} and RT-DETR-L~\cite{zhao2024rtdetr} detection, ADE20K~\cite{zhou2017ade20k} and Cityscapes~\cite{cordts2016cityscapes} SegFormer~\cite{xie2021segformer} segmentation, DepthAnything depth~\cite{yang2024depthanything}, and supporting embedding probes. It compares raw NIR, native RGB and translated RGB and reports a per-task \emph{gap-closure} metric (Chapter~\ref{ch:results}).
+\end{enumerate}
+
+\section{Report structure}
+\label{sec:intro_structure}
+
+Chapter~\ref{ch:background} surveys NIR imaging physics, the NIR-vs-RGB statistical gap, and prior work on image-to-image translation. Chapter~\ref{ch:requirements} sets out the requirements and constraints and the design choices that follow, including the rationale for moving from a Pix2Pix-style baseline to a NAFNet teacher with a knowledge-distilled edge student. Chapter~\ref{ch:implementation} covers the data-collection rig, calibration, model implementation, training, and deployment pipeline. Chapter~\ref{ch:testplan} describes the test plan, Chapter~\ref{ch:results} reports image-quality, downstream gap-closure, ablation and export-readiness results, and Chapter~\ref{ch:evaluation} critically evaluates the project against its objectives.

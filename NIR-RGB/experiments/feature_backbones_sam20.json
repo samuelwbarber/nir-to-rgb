@@ -1,0 +1,12 @@
+{
+  "sam_timm": {
+    "raw_rgb": 1.0,
+    "raw_nir": 0.9882171481847764,
+    "conv01": 0.9989041209220886,
+    "conv02": 0.9988368302583694,
+    "primary_metric": "embedding_cosine_vs_rgb",
+    "n_samples": 20,
+    "improvement01_vs_nir": 0.010686972737312228,
+    "improvement02_vs_nir": 0.010619682073593095
+  }
+}

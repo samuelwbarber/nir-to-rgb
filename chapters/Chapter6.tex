@@ -1,0 +1,144 @@
+\doublespacing % Do not change - required
+
+\chapter{Test Plan and Verification}
+\label{ch:testplan}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% IMPORTANT
+\begin{spacing}{1} %THESE FOUR
+\minitoc % LINES MUST APPEAR IN
+\end{spacing} % EVERY
+\thesisspacing % CHAPTER
+% COPY THEM IN ANY NEW CHAPTER
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This chapter defines verification of the dataset, translator, evaluation harness and deployment-target student. Each requirement in Chapter~\ref{ch:requirements} is linked to a repeatable test and acceptance condition. Numerical outcomes are kept in Chapter~\ref{ch:results}. This chapter describes how those numbers are produced.
+
+\section{Verification Matrix}
+\label{sec:test_matrix}
+
+\autoref{tab:test_matrix} links the requirements and success criteria to the tests used to verify them. Tests T1--T5 cover the translator and dataset, while T6--T8 cover export and deployment.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{0.07\linewidth}p{0.13\linewidth}p{0.38\linewidth}p{0.32\linewidth}}
+\hline
+\textbf{Test} & \textbf{Requirement} & \textbf{Procedure} & \textbf{Acceptance condition} \\
+\hline
+T1 & F1 & Run every test image through the selected checkpoint and validate output shape, type and range. & One three-channel output at the input resolution for every sample, with no failed inference. \\
+T2 & F2, S1 & Audit pair integrity and residual NIR/RGB alignment before training or evaluation. & Every listed pair is readable and matched, split provenance is frozen, and alignment failures are removed and reported. \\
+T3 & F3 & Repeat inference on the same inputs with the same checkpoint and runtime. & Repeated 8-bit outputs are identical for a fixed runtime. \\
+T4 & F4 & Load the exported model in each target runtime and pass native preprocessed NIR frames through the complete interface. & The runtime accepts the documented input convention and returns standard 8-bit RGB without downstream changes. \\
+T5 & N3, S2 & Evaluate image quality and the frozen downstream panel on the held-out test images. & Positive gap closure on at least three of five tasks, with no task below its raw-NIR baseline. \\
+T6 & N1, S3 & Benchmark the selected student's model inference on the Raspberry~Pi~5 at $256\times256$. & Mean inference latency no greater than 200\,ms per frame, equivalent to at least 5\,FPS. \\
+T7 & N2 & Record artefact size, peak resident memory and swap activity during sustained inference. & The model loads and runs without out-of-memory failure or swapping while meeting T6. \\
+T8 & F2, N2 & Compare PyTorch, exported FP32 and INT8 outputs on the same inputs. & FP32 export remains numerically close to PyTorch; INT8 retains the S2 acceptance condition and its quality loss is reported. \\
+\hline
+\end{tabular}
+\caption{Traceability from project requirements to verification tests.}
+\label{tab:test_matrix}
+\end{table}
+
+
+\section{Downstream Agreement}
+\label{sec:test_downstream}
+
+The main evaluation runs a panel of frozen RGB-pretrained models on raw NIR, translated RGB and native RGB. Native-RGB predictions act as a reference for model behaviour, not as human-labelled ground truth. The resulting numbers measure agreement with the model's RGB behaviour and must not be described as absolute task accuracy.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lll}
+\hline
+\textbf{Model} & \textbf{Metric} & \textbf{Task} \\
+\hline
+YOLOv8m & mAP@0.5, mAP@0.5:0.95 & object detection \\
+RT-DETR-L & mAP@0.5, mAP@0.5:0.95 & object detection \\
+SegFormer-B0 (ADE20K) & Dice per class & semantic segmentation \\
+SegFormer-B0 (Cityscapes) & Dice per class & semantic segmentation \\
+DepthAnything-Small & per-image min--max-normalised L1 & depth estimation \\
+DINOv2-S & cosine similarity & embedding agreement \\
+DINOv2-L & cosine similarity & embedding agreement \\
+CLIP-B/16 & cosine similarity & embedding agreement \\
+SigLIP2 & cosine similarity & embedding agreement \\
+\hline
+\end{tabular}
+\caption{Evaluation panel: frozen models~\cite{jocher2023yolov8,zhao2024rtdetr,xie2021segformer,yang2024depthanything,oquab2024dinov2,radford2021clip,tschannen2025siglip2} and metrics for measuring gap closure between raw NIR and native RGB.}
+\label{tab:downstream_panel_test}
+\end{table}
+
+For each evaluator, the primary metric is reduced to the gap-closure statistic defined in Section~\ref{sec:design_evaluation}.
+
+\section{Verification of the Evaluation Harness}
+\label{sec:test_harness_verify}
+
+The harness is software under test and is checked independently of the translator. Small deterministic fixtures exercise the aggregation and evaluator-specific edge cases before a model result is trusted.
+
+\begin{table}[!htbp]
+\centering
+\footnotesize
+\begin{tabular}{p{0.23\linewidth}p{0.48\linewidth}p{0.19\linewidth}}
+\hline
+\textbf{Fixture} & \textbf{Check} & \textbf{Expected result} \\
+\hline
+NIR identity & Set the translated metric equal to the raw-NIR metric. & Gap closure $=0$. \\
+RGB identity & Set the translated metric equal to the RGB metric. & Gap closure $=1$. \\
+Negative control & Set the translated metric below the raw-NIR metric. & Negative gap closure. \\
+Zero denominator & Set the RGB and NIR metrics equal. & Undefined result, no division error. \\
+Detection edge cases & Test empty reference, empty prediction, duplicate candidates and threshold-boundary IoU. & Documented NaN, zero and one-to-one matching behaviour. \\
+Ordering & Reorder images without changing values. & Identical aggregate result. \\
+\hline
+\end{tabular}
+\caption{Oracle and edge-case tests used to verify the gap-closure harness.}
+\label{tab:harness_tests}
+\end{table}
+
+DepthAnything provides an additional behavioural check rather than a proof of correctness. Depth depends strongly on geometry and texture, so a large agreement loss prompts inspection for geometric warping or over-smoothing, but the fixtures in \autoref{tab:harness_tests} remain the direct verification of the aggregation implementation. Running \texttt{python scripts/harness\_unit\_tests.py} produced 10 passing and zero failing tests. Results and logs are retained under \path{experiments/harness_unit_tests/}.
+
+
+\section{Controlled Robustness Tests}
+\label{sec:test_robustness}
+
+The field dataset contains natural variation, but it does not give controlled coverage of every capture condition. A fixed test subset is therefore evaluated after applying deterministic perturbations to the NIR input only. The RGB reference remains unchanged.
+
+\begin{table}[!htbp]
+\centering
+\footnotesize
+\begin{tabular}{lll}
+\hline
+\textbf{Perturbation} & \textbf{Levels} & \textbf{Purpose} \\
+\hline
+Exposure gain & $0.8,\ 1.2$ & sensitivity to under- and over-exposure \\
+Gamma & $0.8,\ 1.2$ & nonlinear sensor and lighting variation \\
+Gaussian blur & $\sigma=1,\ 2$ pixels & focus error and motion blur \\
+Gaussian noise & $\sigma=0.01,\ 0.03$ on $[0,1]$ & sensor noise at lower light levels \\
+\hline
+\end{tabular}
+\caption{Controlled NIR-input perturbations used for robustness testing.}
+\label{tab:robustness_tests}
+\end{table}
+
+The sweep uses the first 200 images of the seed-42 test split, without further shuffling, for the final teacher and selected FP32 student. It reports paired changes in PSNR, LPIPS, CLIP-B/16 cosine and DINOv2-L cosine in \path{experiments/robustness_v1/per_image.csv}. The measured deltas, and the operating envelope they define, are reported in Section~\ref{sec:res_robustness}.
+
+\section{Export and Quantisation Verification}
+\label{sec:test_export}
+
+Export is verified before latency is measured. A fixed set of validation NIR images is run through PyTorch FP32, ONNX FP32 and LiteRT FP32. Output shape, range and finite values are checked, followed by mean and maximum absolute differences from PyTorch. Repeated runs on each runtime verify determinism. A visible image grid is also inspected because a small aggregate error can hide a layout or channel-order fault.
+
+The INT8 models are then evaluated on the same final test data as the FP32 student. PSNR, SSIM, LPIPS and downstream gap closure are compared directly with FP32, and the difference is reported rather than described only as visually similar. Calibration uses 100 representative NIR frames from the training split. No test image is used to select ranges, exclude operators or choose between quantisation variants.
+
+The export artefact size and peak resident memory are recorded for every runtime. Peak memory is measured after model loading and during sustained inference, with swap activity checked at the same time. This verifies N2 directly rather than using parameter count as a proxy.
+
+
+\section{Reproducibility}
+\label{sec:test_repro}
+
+Each experiment directory keeps the configuration used for the run, and the evaluation scripts pin the configuration and checkpoint they load, so every reported number can be traced to the model that produced it. The train/validation/test split is derived deterministically from a fixed seed, so the same partition is recovered on every run. Per-image metrics are retained for every evaluation, so aggregate tables, confidence intervals and failure cases can be regenerated without rerunning the downstream models, and the bootstrap settings behind the confidence intervals are stored alongside the per-image data. Package versions are pinned in a frozen environment file, and the training and evaluation commands are encoded in per-experiment run scripts. The deployment commands are collected in Appendix~\ref{app:userguide}.
+
+\section{Test Limitations}
+\label{sec:test_limitations}
+
+The downstream panel uses native-RGB model outputs as pseudo-ground truth because the captured dataset has no task annotations. It therefore measures recovery of RGB-model behaviour, not correctness against human labels. The on-device latency figures measure the model call on prepared tensors. Per-frame pre- and post-processing was not separately timed, so the full capture-to-output delay of a deployed pipeline is not tested. The data cover outdoor urban scenes in London and do not establish performance indoors, in other climates or with a different NIR sensor. Controlled perturbations broaden the tested conditions but cannot replace an independent external dataset.

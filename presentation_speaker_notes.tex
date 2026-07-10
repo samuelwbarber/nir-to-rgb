@@ -1,0 +1,203 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1.8cm]{geometry}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{titlesec}
+\setlist[itemize]{nosep,leftmargin=1.3em,topsep=2pt}
+\definecolor{ICLBlue}{RGB}{0,0,205}
+\definecolor{Hi}{RGB}{200,30,30}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\slidehd}[3]{%
+  \vspace{6pt}\noindent{\bfseries\textcolor{ICLBlue}{#1}}%
+  \hfill{\small #2 \quad\textbf{[#3]}}\\[1pt]}
+\newcommand{\bridge}[1]{\textit{\textcolor{ICLBlue}{Bridge:}} \textit{#1}}
+\pagestyle{plain}
+
+\begin{document}
+
+\begin{center}
+	{\Large\bfseries\textcolor{ICLBlue}{Speaker Notes --- Edge-Deployable NIR-to-RGB Translation}}\\[4pt]
+	{\small 15\,min talk + 10\,min Q\&A. Budgeted $\approx$\textbf{17:10} (ran $\approx$12 live).}
+\end{center}
+
+\noindent\textbf{The one through-line} (say it on slide 4, pay it off on slides 11 \& 13):\\
+\textit{A translation pre-processor should be judged by how much frozen-model behaviour it recovers, not by how good the image looks.}
+
+\medskip
+\noindent Cumulative time targets are in \textbf{[brackets]}. Glance at the clock on each slide change to check pace.
+
+\hrulefill
+
+\slidehd{1. Title}{0:15}{0:15}
+\begin{itemize}
+	\item ``Good [morning]. I'm Sam Barber. My project is an edge-deployable NIR-to-RGB translator that lets ordinary RGB vision models work on near-infrared input.''
+	\item Don't linger. Move.
+\end{itemize}
+
+\slidehd{2. Why near-infrared?}{0:45}{1:00}
+\begin{itemize}
+	\item ``NIR sees what visible light can't.'' Point at the hand: ``it penetrates skin --- you can see the subsurface veins.''
+	\item Quick spread: vegetation reflects it, water absorbs it; it works in darkness and fog.
+	\item \textbf{The hook:} ``But it has no colour and materials look different --- which is exactly why RGB-trained models misread it.''
+	\item \bridge{Here's that failure, directly.}
+\end{itemize}
+
+\slidehd{3. The problem}{1:10}{2:10}
+\begin{itemize}
+	\item Gesture across the three: ``Same scene, RGB works, NIR fails --- a detector, and two segmentation models.''
+	\item Punch: ``Retraining every downstream model on labelled NIR is impractical.''
+	\item \bridge{So instead of changing the models, change the input.}
+\end{itemize}
+
+\slidehd{4. The idea + thesis}{1:10}{3:20}
+\begin{itemize}
+	\item Walk the arrow: NIR sensor $\to$ translator $\to$ \emph{frozen, unmodified} RGB model.
+	\item \textcolor{Hi}{\textbf{Read the blue box almost verbatim --- this is the spine of the talk.}}
+	\item ``Everything I show next is evidence for that one claim.''
+	\item \bridge{Why isn't this just standard image translation?}
+\end{itemize}
+
+\slidehd{5. Why it's hard + prior work}{0:50}{4:10} \textnormal{\small\textcolor{Hi}{(most compressible --- cut here if behind)}}
+\begin{itemize}
+	\item Hard: colour is absent (one-to-many), materials differ, paired data is scarce because of parallax.
+	\item Prior work: GANs and diffusion, judged on image quality; diffusion is iterative + stochastic, wrong for a deterministic edge pre-processor.
+	\item ``That gives my two design choices: a deterministic restoration backbone, and feature-space supervision.''
+	\item \bridge{First, the data.}
+\end{itemize}
+
+\slidehd{6. Data: the rig}{1:20}{5:30}
+\begin{itemize}
+	\item ``I built a capture rig: a Pi~5, two camera modules, one behind an 850\,nm filter.''
+	\item \textbf{The key idea:} beam-splitter cube $\to$ both cameras share an optical centre $\to$ no parallax $\to$ a \emph{single} homography aligns the whole frame regardless of depth.
+	\item \textcolor{Hi}{\textbf{Novelty:}} ``no public NIR/RGB set is simultaneously captured and aligned at this scale.'' 12{,}536 pairs.
+	\item \bridge{How the pairs are actually aligned.}
+\end{itemize}
+
+\slidehd{7. Producing aligned pairs}{0:50}{6:20}
+\begin{itemize}
+	\item Walk the 5 steps briefly: raw pair, sharpness filter, centre-crop, SIFT+RANSAC homography, warp and resize.
+	\item \textbf{The point:} these are standard CV steps; the enabler is the optics, no parallax, so one global warp aligns every depth.
+	\item Keep it quick, this is supporting detail.
+	\item \bridge{Now the model, and the core idea of the project.}
+\end{itemize}
+
+\slidehd{8. Core method: foundation-feature supervision}{1:50}{8:10} \textnormal{\small\textcolor{Hi}{(give this room --- biggest idea)}}
+\begin{itemize}
+	\item Backbone: NAFNet, activation-free (SimpleGate). \textcolor{Hi}{\textbf{Novelty:}} first use of NAFNet for NIR$\to$RGB. Clean operator set, quantises well.
+	\item \textbf{The key swap:} ``Standard translators use one VGG perceptual loss. I replace it with a frozen \emph{ensemble}: DINOv2, CLIP, ResNet-50, used as a training signal on an unmodified backbone.''
+	\item Point at the equation: ``Train so each frozen extractor sees the translation the way it sees real RGB. Then any downstream model built on those features behaves more like it does on RGB.''
+	\item \bridge{The teacher is 116 million parameters, too big for a Pi.}
+\end{itemize}
+
+\slidehd{9. Making it deployable}{1:00}{9:10}
+\begin{itemize}
+	\item Walk the arrow: teacher $\to$ distil 67$\times$ $\to$ 1.7\,M student $\to$ mixed-INT8 $\to$ 2.3\,MB.
+	\item ``Student keeps the activation-free blocks, so the same clean export. Distilled on the teacher's outputs plus feature losses, downstream fidelity not pixel mimicry.''
+	\item ``Exported to LiteRT for the CPU and a Hailo HEF for the NPU.''
+	\item \bridge{So does it actually work? First the eye test.}
+\end{itemize}
+
+\slidehd{10. Does it actually work? (qualitative)}{0:55}{10:05}
+\begin{itemize}
+	\item ``Rows: NIR in at the top, ground truth at the bottom, the models in between.''
+	\item ``All produce plausible colour. Pix2Pix, row two, even ties the student on PSNR and SSIM, so by every traditional measure it looks fine.''
+	\item \textcolor{Hi}{\textbf{Set the trap:}} ``Keep your eye on Pix2Pix.''
+	\item \bridge{The eye test misleads, and so does the standard pixel metric.}
+\end{itemize}
+
+\slidehd{11. Why not PSNR?}{0:45}{10:50}
+\begin{itemize}
+	\item ``On the left is the NIR input. Colour is gone, so many RGB outputs are possible: here the same person in a blue shirt, or a red postbox.''
+	\item \textcolor{Hi}{\textbf{The point:}} ``Scored against the true RGB on the right, the postbox gets 18\,dB and the correct person only 13. PSNR prefers the postbox because it keeps the red pixels. It rewards pixels, not meaning.''
+	\item \bridge{So I measure success a different way.}
+\end{itemize}
+
+\slidehd{12. Gap closure}{1:05}{11:55}
+\begin{itemize}
+	\item ``Run a frozen model on three inputs, raw NIR, my translation, real RGB, and ask how far translation moves it toward the RGB result.''
+	\item ``Zero = no better than NIR. One = full RGB behaviour recovered. Negative = made it worse.''
+	\item ``Reference is the model's own RGB output, so no human labels needed, across detection, segmentation, depth, and held-out embeddings.''
+	\item \bridge{Here's the headline.}
+\end{itemize}
+
+\slidehd{13. Headline result}{1:45}{13:40} \textnormal{\small\textcolor{Hi}{(the money slide --- slow down)}}
+\begin{itemize}
+	\item ``Both student precisions: positive on all five primary tasks. Pre-specified bar was three of five.''
+	\item \textcolor{Hi}{\textbf{The payoff:}} ``Now Pix2Pix. It tied the student on PSNR and SSIM, looked fine. But downstream it goes \emph{negative} on both detectors, and on the independent probes it sits at the no-translation level.''
+	\item ``So a model that looked competitive recovers almost nothing. That's the central finding: pixel fidelity doesn't predict downstream usefulness.''
+	\item (If asked why only DINOv2-L/SigLIP2: ``those were held out of training, I have the others in backup.'')
+	\item \bridge{How do I know the ensemble is what does this?}
+\end{itemize}
+
+\slidehd{14. What drives it: the ablation}{1:00}{14:40}
+\begin{itemize}
+	\item ``Drop the foundation ensemble and PSNR actually gets \emph{better}, the best of all three.''
+	\item \textcolor{Hi}{\textbf{The point:}} ``But detection closure falls to zero and depth and embedding agreement drop. The ensemble, not pixels, is what recovers behaviour.''
+	\item Ties the novelty to evidence: the ensemble is causal, not incidental.
+	\item \bridge{And it runs on the device.}
+\end{itemize}
+
+\slidehd{15. Edge + live demo}{1:10}{15:50}
+\begin{itemize}
+	\item ``On the Pi CPU, the INT8 student hits 5.05\,FPS, meets target. On the Hailo NPU, 27\,FPS.''
+	\item ``INT8 is actually \emph{faster} than FP32 here, narrower kernels, less bandwidth. Under 50\,MB, no swap, no throttling.''
+	\item \textcolor{Hi}{\textbf{Alt+Tab to the pre-opened video}}: ``this is the app on the Pi: NIR, translation, and a reference, all segmented in real time.''
+	\item Let $\sim$10\,s play, then Alt+Tab back to the slides.
+	\item \bridge{Briefly, the honest limitations.}
+\end{itemize}
+
+\slidehd{16. Limitations}{0:40}{16:30}
+\begin{itemize}
+	\item Hit fast, don't dwell: behaviour not accuracy (pseudo-labels); people untested (privacy); London-only; trained on sharp frames only, so it degrades on blur or noise.
+	\item ``Stating these is part of the result, I know where it stops working.''
+	\item \bridge{To wrap up.}
+\end{itemize}
+
+\slidehd{17. Conclusion}{0:40}{17:10}
+\begin{itemize}
+	\item Restate the blue box: ``Pixel fidelity doesn't predict downstream usefulness. Supervising and evaluating in the models' feature spaces is what recovers behaviour.''
+	\item \textcolor{Hi}{\textbf{Name the three novelties}}: the shared-aperture dataset, the first NAFNet-for-NIR with a foundation-feature ensemble, and the distilled real-time edge student.
+	\item ``Thank you, happy to take questions.''
+\end{itemize}
+
+\hrulefill
+
+\noindent{\bfseries\textcolor{ICLBlue}{Delivery reminders}}
+\begin{itemize}
+	\item \textbf{Pace by the clock}, not by feel. If you reach the rig (slide 6) by $\sim$5:30, you're on track.
+	\item Budgeted $\approx$17:10, but you ran $\approx$12 live, so you likely land $\sim$13--14. If pressed, drop \textbf{slide 7} (aligning pairs) and compress \textbf{slide 5} (why it's hard) and \textbf{slide 16} (limitations).
+	\item Say ``\textbf{behaviour agreement}'', never ``accuracy''. Your report is careful about this and markers will notice.
+	\item Pause after the Pix2Pix reveal on slide 13. Let it land.
+	\item Pre-load the demo screenshot/clip; never live-network to the Pi mid-talk.
+\end{itemize}
+
+\medskip
+\noindent{\bfseries\textcolor{ICLBlue}{Q\&A --- likely questions $\to$ where to go}}
+
+\smallskip
+\renewcommand{\arraystretch}{1.25}
+\noindent\begin{tabularx}{\textwidth}{@{}Y Y@{}}
+\toprule
+\textbf{Question} & \textbf{Answer / backup slide} \\
+\midrule
+Pseudo-labels --- isn't it circular? & Independent probes (DINOv2-L, SigLIP2) held out of training, still close $>$0.5. \\
+What about DINOv2-S / CLIP closures? & \emph{Backup: embedding agreement} --- higher, but training-overlapping, so supporting only. \\
+Why is detection weaker than segmentation? & Small objects + fine texture reproduced least faithfully; seg/depth lean on large structure. \\
+Why NAFNet for a synthesis task? & \emph{Backup: why NAFNet} --- activation-free $\to$ predictable ranges $\to$ clean INT8 / edge export. \\
+How did you actually align the pairs? & \emph{Backup: producing aligned pairs} --- beam-splitter removes parallax $\to$ one homography. \\
+How general is the method? & \emph{Backup: generalises (and breaks)} --- transfers to thermal, breaks on SAR. \\
+Why not diffusion? & Iterative + stochastic --- violates latency budget and determinism (F3). \\
+Why not just fine-tune the downstream models? & Needs weights + labelled NIR per task; out of scope. Translator leaves them unchanged. \\
+Pixel metrics for Pix2Pix vs student? & \emph{Backup: image-quality metrics} --- level on PSNR/SSIM. \\
+What's actually novel here? & Combination + evaluation standard: NAFNet for NIR$\to$RGB, foundation-ensemble as training signal, behaviour-centred gap closure. \\
+\bottomrule
+\end{tabularx}
+
+\medskip
+\noindent\textbf{If you don't know:} say so, then reason out loud. Honesty is explicitly marked.
+
+\end{document}

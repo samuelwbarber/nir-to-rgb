@@ -1,0 +1,24 @@
+\doublespacing % Do not change - required
+
+\chapter{Ethical and Legal Considerations}
+\label{app:ethics}
+
+\thesisspacing % Do not change - required
+
+% Transplanted from the Interim Report's Ethical/Legal Plan. Phrased in the
+% past tense / "what we did" style appropriate to the final report.
+
+\section{Privacy and Data Minimisation}
+
+The camera rig was mounted tilted upwards, framing buildings, vegetation and sky, so pedestrians were not captured at close range. Any people in frame appear incidentally. Retained pairs are stored at a low resolution of $256\times256$, and this downsampling discards the fine detail that identification would require, reducing distant figures to unidentifiable silhouettes. The dataset will not be published, so no imagery at identifying resolution is retained in the released artefacts or distributed.
+
+\section{Legal and Licensing}
+
+The third-party datasets used for evaluation, including KAIST~\cite{hwang2015multispectral}, the EPFL RGB-NIR scenes~\cite{epfl_rgbnir_dataset}, ADE20K~\cite{zhou2017ade20k} and Cityscapes~\cite{cordts2016cityscapes}, were used under their published research licences and are credited by citation. The frozen evaluation models were likewise used under their respective licences. The YOLOv8 detector is released under AGPL-3.0~\cite{jocher2023yolov8}, so it was used only as an offline evaluation probe and is not part of the deployed system. The remaining models, such as DINOv2, CLIP, SegFormer and DepthAnything, are research or permissively licensed. The deployed student is original work, and the exported LiteRT and HEF artefacts contain none of the third-party AGPL code. The complete code and trained models are held in a private repository to which the supervisor and examiners can be given access.
+
+
+
+
+
+
+

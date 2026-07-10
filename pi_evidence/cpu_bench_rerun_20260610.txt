@@ -1,0 +1,36 @@
+Loaded 100 images from /home/pi/bench/test_sample_256/resized_256/nir
+Platform : raspberrypi (4 cores)
+Threads  : 4 Warmup: 10 Runs: 100
+Models:
+  student_08_distill_downstream/distill_litert_fp32.tflite (7.1 MB)
+  student_08_distill_downstream/distill_litert_int8.tflite (2.3 MB)
+  student_hailo_30fps/hailo_litert_fp32.tflite (46.6 MB)
+  student_hailo_30fps/hailo_litert_int8.tflite (13.0 MB)
+
+  Loading student_08_distill_downstream/distill_litert_fp32.tflite (7.1 MB) ...
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+  Input : serving_default_args_0 [  1   3 256 256] dtype=float32 quant=(0.0, 0)
+  Latency : 227.2 ms (min 203.6 p50 226.0 p95 242.1 max 289.5)
+  FPS     : 4.40
+
+  Loading student_08_distill_downstream/distill_litert_int8.tflite (2.3 MB) ...
+  Input : serving_default_args_0 [  1   3 256 256] dtype=float32 quant=(0.0, 0)
+  Latency : 198.0 ms (min 180.1 p50 195.0 p95 221.2 max 252.5)
+  FPS     : 5.05
+
+  Loading student_hailo_30fps/hailo_litert_fp32.tflite (46.6 MB) ...
+  Input : serving_default_args_0 [  1   3 256 256] dtype=float32 quant=(0.0, 0)
+  Latency : 669.1 ms (min 615.8 p50 667.0 p95 698.5 max 777.1)
+  FPS     : 1.49
+
+  Loading student_hailo_30fps/hailo_litert_int8.tflite (13.0 MB) ...
+  Input : serving_default_args_0 [  1   3 256 256] dtype=float32 quant=(0.0, 0)
+  Latency : 517.0 ms (min 470.1 p50 515.9 p95 562.8 max 602.1)
+  FPS     : 1.93
+
+SUMMARY
+Model                                                                    FPS  ms/frame   p95 ms     MB
+student_08_distill_downstream/distill_litert_int8.tflite                5.05     198.0    221.2    2.3
+student_08_distill_downstream/distill_litert_fp32.tflite                4.40     227.2    242.1    7.1
+student_hailo_30fps/hailo_litert_int8.tflite                            1.93     517.0    562.8   13.0
+student_hailo_30fps/hailo_litert_fp32.tflite                            1.49     669.1    698.5   46.6

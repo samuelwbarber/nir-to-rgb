@@ -1,0 +1,44 @@
+[0;93m2026-05-28 15:01:43.514105476 [W:onnxruntime:Default, device_discovery.cc:283 GetGpuDevices] Failed to detect devices under "/sys/class/drm/card1": device_discovery.cc:93 ReadFileContents Failed to open file: "/sys/class/drm/card1/device/vendor"[m
+[0;93m2026-05-28 15:01:43.514153957 [W:onnxruntime:Default, device_discovery.cc:283 GetGpuDevices] Failed to detect devices under "/sys/class/drm/card0": device_discovery.cc:93 ReadFileContents Failed to open file: "/sys/class/drm/card0/device/vendor"[m
+Loaded 100 real images from /home/pi/bench/test_sample_256/resized_256/nir
+
+Platform : raspberrypi  (4 cores)
+Threads  : 4
+Warmup   : 30   Runs: 200
+
+Models found (5):
+  student_08_distill_downstream/model.onnx  (7.6 MB)
+  student_08_distill_downstream/model_q.onnx  (2.5 MB)
+  student_hailo_30fps/model.onnx  (47.4 MB)
+  student_hailo_30fps/model_q.onnx  (12.8 MB)
+  student_hailo_30fps/model_static.onnx  (47.2 MB)
+
+============================================================
+BENCHMARKING
+============================================================
+
+  Loading student_08_distill_downstream/model.onnx  (7.6 MB) ...
+  Input shape : ['batch', 3, 256, 256]
+  Threads     : 4
+  Latency     : 225.2 ms  (min 222.1  p50 223.7  p95 232.4  max 240.2)
+  FPS         : 4.44
+
+  Loading student_08_distill_downstream/model_q.onnx  (2.5 MB) ...
+  Input shape : ['batch', 3, 256, 256]
+  Threads     : 4
+  Latency     : 372.8 ms  (min 352.3  p50 371.9  p95 389.8  max 393.6)
+  FPS         : 2.68
+
+  Loading student_hailo_30fps/model.onnx  (47.4 MB) ...
+  Input shape : ['batch', 3, 256, 256]
+  Threads     : 4
+  Latency     : 715.3 ms  (min 630.6  p50 721.5  p95 725.3  max 727.8)
+  FPS         : 1.40
+
+  Loading student_hailo_30fps/model_q.onnx  (12.8 MB) ...
+  Input shape : ['batch', 3, 256, 256]
+  Threads     : 4
+  Latency     : 977.4 ms  (min 937.4  p50 980.5  p95 1030.3  max 1035.9)
+  FPS         : 1.02
+
+  Loading student_hailo_30fps/model_static.onnx  (47.2 MB) ...

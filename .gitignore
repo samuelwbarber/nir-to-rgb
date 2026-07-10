@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+# Curated repo: source, report/paper LaTeX + compiled PDFs, figures, evidence.
+# Excludes stale archives, generated build artefacts, and large binary weights.
+# ---------------------------------------------------------------------------
+
+# Stale duplicates / superseded builds
+_archive/
+
+# Editor / tooling
+.claude/
+.vscode/
+.idea/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.ipynb_checkpoints/
+
+# Model weights & exported artefacts (kept in Weights & Biases, see NIR-RGB/README)
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.onnx
+*.tflite
+*.hef
+*.engine
+
+# LaTeX build intermediates (source .tex + final .pdf are tracked)
+*.aux
+*.bcf
+*.bbl
+*.blg
+*.brf
+*.fdb_latexmk
+*.fls
+*.idx
+*.ilg
+*.ind
+*.lof
+*.lot
+*.maf
+*.mtc
+*.mtc[0-9]*
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+*.vrb
+*.log

@@ -1,0 +1,42 @@
+{
+  "nir_files_discovered": 12536,
+  "rgb_files_discovered": 12536,
+  "matched_stems": 12536,
+  "nir_only_stems": 0,
+  "rgb_only_stems": 0,
+  "duplicate_nir_stems": 0,
+  "duplicate_rgb_stems": 0,
+  "duplicate_paths": 0,
+  "unreadable_nir_images": 0,
+  "unreadable_rgb_images": 0,
+  "pairs_with_mismatched_dimensions": 0,
+  "pairs_below_min_side": 0,
+  "minimum_stored_height": 60,
+  "maximum_stored_height": 1080,
+  "minimum_stored_width": 1,
+  "maximum_stored_width": 1344,
+  "pairs_below_16px_side": 1,
+  "pairs_below_128px_side": 2,
+  "pairs_with_wrong_channel_count": 0,
+  "final_accepted_pairs": 12536,
+  "rejected_pairs": 0,
+  "minimum_accepted_side": 1,
+  "nir_duplicate_hash_groups": 0,
+  "nir_duplicate_hash_extra_files": 0,
+  "nir_duplicate_hash_members": [],
+  "rgb_duplicate_hash_groups": 0,
+  "rgb_duplicate_hash_extra_files": 0,
+  "rgb_duplicate_hash_members": [],
+  "alignment_dimension_outliers": [
+    {
+      "stem": "20260505_141018_440854_f00ca076",
+      "height": 511,
+      "width": 1
+    },
+    {
+      "stem": "20260505_142415_535221_f00ca076",
+      "height": 60,
+      "width": 60
+    }
+  ]
+}

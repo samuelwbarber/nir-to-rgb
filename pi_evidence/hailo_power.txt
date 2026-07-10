@@ -1,0 +1,8 @@
+Executing on device: 0001:01:00.0
+[HailoRT] [error] Firmware control has failed. Major status: 0x400300b4, Minor status: 0x400300b4
+[HailoRT] [error] Firmware major status: CONTROL_PROTOCOL_STATUS_UNSUPPORTED_DEVICE
+[HailoRT] [error] Firmware minor status: CONTROL_PROTOCOL_STATUS_UNSUPPORTED_DEVICE
+[HailoRT] [error] Opcode HAILO_CONTROL_OPCODE_SET_POWER_MEASUEMENT is not supported on the current board.
+Failed to set power measurement parameters, status HAILO_UNSUPPORTED_OPCODE(48)
+Failed power measurement, status HAILO_UNSUPPORTED_OPCODE(48)
+Failed to execute on device: 0001:01:00.0. status= HAILO_UNSUPPORTED_OPCODE(48)

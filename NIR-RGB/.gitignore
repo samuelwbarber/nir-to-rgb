@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Data and experiments
+data/nir/*
+data/rgb/*
+!data/nir/.gitkeep
+!data/rgb/.gitkeep
+data/mp_cache.json
+*.ckpt
+*.pth
+*.pt
+*.onnx
+*.rknn
+# Renamed checkpoints (e.g. .pth.collapsed_e185, .ckpt.bak) bypass the bare-suffix rules above
+*.ckpt.*
+*.pth.*
+*.pt.*
+# Belt-and-braces: nothing under any experiments checkpoints dir should be tracked
+experiments/*/checkpoints/
+wandb/
+
+# Training logs
+*.log
+*.log.*
+logs/
+experiments/_archive/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Claude Code local settings
+.claude/
+
+# Training/eval sample dumps — keep only the final image per folder
+experiments/phase1_unet_pix2pix/samples/*
+!experiments/phase1_unet_pix2pix/samples/epoch_0003.png
+experiments/phase2_teacher_nafnet64/samples/*
+!experiments/phase2_teacher_nafnet64/samples/epoch_0173.png
+experiments/phase3_collapsed_l1-25_gan-2/samples/*
+!experiments/phase3_collapsed_l1-25_gan-2/samples/epoch_0174.png
+experiments/phase3_collapsed_l1-50/random_samples/*
+!experiments/phase3_collapsed_l1-50/random_samples/epoch_0201.png
+experiments/phase3_collapsed_l1-50/samples/*
+!experiments/phase3_collapsed_l1-50/samples/epoch_0201.png
+experiments/phase3_teacher_nafnet64_smartcrop/random_samples/*
+!experiments/phase3_teacher_nafnet64_smartcrop/random_samples/epoch_0193.png
+experiments/phase3_teacher_nafnet64_smartcrop/samples/*
+!experiments/phase3_teacher_nafnet64_smartcrop/samples/epoch_0193.png
+experiments/phase3_teacher_nafnet64_smartcrop_fp32/random_samples/*
+!experiments/phase3_teacher_nafnet64_smartcrop_fp32/random_samples/epoch_0067.png
+experiments/phase3_teacher_nafnet64_smartcrop_fp32/samples/*
+!experiments/phase3_teacher_nafnet64_smartcrop_fp32/samples/epoch_0067.png
+experiments/phase4_student_nafnet24_distill/random_samples/*
+!experiments/phase4_student_nafnet24_distill/random_samples/epoch_0053.png
+experiments/phase4_student_nafnet24_distill/samples/*
+!experiments/phase4_student_nafnet24_distill/samples/epoch_0053.png
+experiments/phase5_teacher_nafnet64_512_ft/random_samples/*
+!experiments/phase5_teacher_nafnet64_512_ft/random_samples/epoch_0008.png
+experiments/phase5_teacher_nafnet64_512_ft/samples/*
+!experiments/phase5_teacher_nafnet64_512_ft/samples/epoch_0008.png
+experiments/phase5_teacher_nafnet64_512_scratch/random_samples/*
+!experiments/phase5_teacher_nafnet64_512_scratch/random_samples/epoch_0003.png
+experiments/phase5_teacher_nafnet64_512_scratch/samples/*
+!experiments/phase5_teacher_nafnet64_512_scratch/samples/epoch_0003.png
+experiments/phase5_teacher_nafnet64_512_scratch_v2/in_train_samples/*
+!experiments/phase5_teacher_nafnet64_512_scratch_v2/in_train_samples/step_00199000.png
+experiments/phase5_teacher_nafnet64_512_scratch_v2/random_samples/*
+!experiments/phase5_teacher_nafnet64_512_scratch_v2/random_samples/epoch_0018.png
+experiments/phase5_teacher_nafnet64_512_scratch_v2/samples/*
+!experiments/phase5_teacher_nafnet64_512_scratch_v2/samples/epoch_0018.png
+experiments/test/samples/*
+!experiments/test/samples/epoch_0002.png
+
+# TensorBoard event files (churn constantly)
+experiments/*/tb/
+# Keep logs for ablation_08_foundation_ensemble_aggressive
+!experiments/ablation_08_foundation_ensemble_aggressive/*.log
+!experiments/ablation_08_foundation_ensemble_aggressive/*.log.*
+!experiments/ablation_08_foundation_ensemble_aggressive/tb/
+!experiments/ablation_08_foundation_ensemble_aggressive/tb/**

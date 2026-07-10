@@ -1,0 +1,191 @@
+Starting Measurements...
+Measuring FPS in HW-only mode
+Network student_small/student_small: 1% | 27 | FPS: 26.97 | ETA: 00:00:59
+[F[2KNetwork student_small/student_small: 3% | 54 | FPS: 26.97 | ETA: 00:00:58
+[F[2KNetwork student_small/student_small: 5% | 82 | FPS: 27.31 | ETA: 00:00:57
+[F[2KNetwork student_small/student_small: 6% | 109 | FPS: 27.22 | ETA: 00:00:56
+[F[2KNetwork student_small/student_small: 8% | 136 | FPS: 27.17 | ETA: 00:00:55
+[F[2KNetwork student_small/student_small: 10% | 164 | FPS: 27.31 | ETA: 00:00:54
+[F[2KNetwork student_small/student_small: 11% | 191 | FPS: 27.26 | ETA: 00:00:53
+[F[2KNetwork student_small/student_small: 13% | 219 | FPS: 27.35 | ETA: 00:00:52
+[F[2KNetwork student_small/student_small: 15% | 246 | FPS: 27.30 | ETA: 00:00:51
+[F[2KNetwork student_small/student_small: 16% | 273 | FPS: 27.27 | ETA: 00:00:50
+[F[2KNetwork student_small/student_small: 18% | 301 | FPS: 27.34 | ETA: 00:00:49
+[F[2KNetwork student_small/student_small: 20% | 328 | FPS: 27.31 | ETA: 00:00:48
+[F[2KNetwork student_small/student_small: 21% | 355 | FPS: 27.28 | ETA: 00:00:47
+[F[2KNetwork student_small/student_small: 23% | 383 | FPS: 27.33 | ETA: 00:00:46
+[F[2KNetwork student_small/student_small: 25% | 410 | FPS: 27.31 | ETA: 00:00:45
+[F[2KNetwork student_small/student_small: 26% | 437 | FPS: 27.29 | ETA: 00:00:44
+[F[2KNetwork student_small/student_small: 28% | 465 | FPS: 27.33 | ETA: 00:00:43
+[F[2KNetwork student_small/student_small: 30% | 492 | FPS: 27.31 | ETA: 00:00:42
+[F[2KNetwork student_small/student_small: 31% | 519 | FPS: 27.29 | ETA: 00:00:41
+[F[2KNetwork student_small/student_small: 33% | 547 | FPS: 27.32 | ETA: 00:00:40
+[F[2KNetwork student_small/student_small: 35% | 574 | FPS: 27.31 | ETA: 00:00:39
+[F[2KNetwork student_small/student_small: 36% | 602 | FPS: 27.34 | ETA: 00:00:38
+[F[2KNetwork student_small/student_small: 38% | 629 | FPS: 27.32 | ETA: 00:00:37
+[F[2KNetwork student_small/student_small: 40% | 656 | FPS: 27.31 | ETA: 00:00:36
+[F[2KNetwork student_small/student_small: 41% | 684 | FPS: 27.33 | ETA: 00:00:35
+[F[2KNetwork student_small/student_small: 43% | 711 | FPS: 27.32 | ETA: 00:00:34
+[F[2KNetwork student_small/student_small: 45% | 738 | FPS: 27.31 | ETA: 00:00:33
+[F[2KNetwork student_small/student_small: 46% | 766 | FPS: 27.33 | ETA: 00:00:32
+[F[2KNetwork student_small/student_small: 48% | 793 | FPS: 27.32 | ETA: 00:00:31
+[F[2KNetwork student_small/student_small: 50% | 820 | FPS: 27.31 | ETA: 00:00:30
+[F[2KNetwork student_small/student_small: 51% | 848 | FPS: 27.33 | ETA: 00:00:29
+[F[2KNetwork student_small/student_small: 53% | 875 | FPS: 27.32 | ETA: 00:00:28
+[F[2KNetwork student_small/student_small: 55% | 903 | FPS: 27.34 | ETA: 00:00:27
+[F[2KNetwork student_small/student_small: 56% | 930 | FPS: 27.33 | ETA: 00:00:26
+[F[2KNetwork student_small/student_small: 58% | 957 | FPS: 27.32 | ETA: 00:00:25
+[F[2KNetwork student_small/student_small: 60% | 985 | FPS: 27.33 | ETA: 00:00:24
+[F[2KNetwork student_small/student_small: 61% | 1012 | FPS: 27.32 | ETA: 00:00:23
+[F[2KNetwork student_small/student_small: 63% | 1039 | FPS: 27.31 | ETA: 00:00:22
+[F[2KNetwork student_small/student_small: 65% | 1067 | FPS: 27.33 | ETA: 00:00:21
+[F[2KNetwork student_small/student_small: 66% | 1094 | FPS: 27.32 | ETA: 00:00:20
+[F[2KNetwork student_small/student_small: 68% | 1121 | FPS: 27.31 | ETA: 00:00:19
+[F[2KNetwork student_small/student_small: 70% | 1149 | FPS: 27.33 | ETA: 00:00:18
+[F[2KNetwork student_small/student_small: 71% | 1176 | FPS: 27.32 | ETA: 00:00:17
+[F[2KNetwork student_small/student_small: 73% | 1204 | FPS: 27.34 | ETA: 00:00:16
+[F[2KNetwork student_small/student_small: 75% | 1231 | FPS: 27.33 | ETA: 00:00:15
+[F[2KNetwork student_small/student_small: 76% | 1258 | FPS: 27.32 | ETA: 00:00:14
+[F[2KNetwork student_small/student_small: 78% | 1286 | FPS: 27.33 | ETA: 00:00:13
+[F[2KNetwork student_small/student_small: 80% | 1313 | FPS: 27.33 | ETA: 00:00:12
+[F[2KNetwork student_small/student_small: 81% | 1340 | FPS: 27.32 | ETA: 00:00:11
+[F[2KNetwork student_small/student_small: 83% | 1368 | FPS: 27.33 | ETA: 00:00:10
+[F[2KNetwork student_small/student_small: 85% | 1395 | FPS: 27.32 | ETA: 00:00:09
+[F[2KNetwork student_small/student_small: 86% | 1422 | FPS: 27.32 | ETA: 00:00:08
+[F[2KNetwork student_small/student_small: 88% | 1450 | FPS: 27.33 | ETA: 00:00:07
+[F[2KNetwork student_small/student_small: 90% | 1477 | FPS: 27.32 | ETA: 00:00:06
+[F[2KNetwork student_small/student_small: 91% | 1505 | FPS: 27.34 | ETA: 00:00:05
+[F[2KNetwork student_small/student_small: 93% | 1532 | FPS: 27.33 | ETA: 00:00:04
+[F[2KNetwork student_small/student_small: 95% | 1559 | FPS: 27.32 | ETA: 00:00:03
+[F[2KNetwork student_small/student_small: 96% | 1587 | FPS: 27.33 | ETA: 00:00:02
+[F[2KNetwork student_small/student_small: 98% | 1614 | FPS: 27.33 | ETA: 00:00:01
+[F[2KNetwork student_small/student_small: 100% | 1640 | FPS: 27.32 | ETA: 00:00:00
+Measuring FPS (and Power on supported platforms) in streaming mode
+Network student_small/student_small: 1% | 27 | FPS: 26.97 | ETA: 00:00:59
+[F[2KNetwork student_small/student_small: 3% | 54 | FPS: 26.97 | ETA: 00:00:58
+[F[2KNetwork student_small/student_small: 5% | 82 | FPS: 27.30 | ETA: 00:00:57
+[F[2KNetwork student_small/student_small: 6% | 109 | FPS: 27.22 | ETA: 00:00:56
+[F[2KNetwork student_small/student_small: 8% | 136 | FPS: 27.17 | ETA: 00:00:55
+[F[2KNetwork student_small/student_small: 10% | 164 | FPS: 27.30 | ETA: 00:00:54
+[F[2KNetwork student_small/student_small: 11% | 191 | FPS: 27.26 | ETA: 00:00:53
+[F[2KNetwork student_small/student_small: 13% | 218 | FPS: 27.22 | ETA: 00:00:52
+[F[2KNetwork student_small/student_small: 15% | 246 | FPS: 27.30 | ETA: 00:00:51
+[F[2KNetwork student_small/student_small: 16% | 273 | FPS: 27.27 | ETA: 00:00:50
+[F[2KNetwork student_small/student_small: 18% | 300 | FPS: 27.25 | ETA: 00:00:49
+[F[2KNetwork student_small/student_small: 20% | 328 | FPS: 27.31 | ETA: 00:00:48
+[F[2KNetwork student_small/student_small: 21% | 355 | FPS: 27.28 | ETA: 00:00:47
+[F[2KNetwork student_small/student_small: 23% | 382 | FPS: 27.26 | ETA: 00:00:46
+[F[2KNetwork student_small/student_small: 25% | 410 | FPS: 27.31 | ETA: 00:00:45
+[F[2KNetwork student_small/student_small: 26% | 437 | FPS: 27.29 | ETA: 00:00:44
+[F[2KNetwork student_small/student_small: 28% | 465 | FPS: 27.33 | ETA: 00:00:43
+[F[2KNetwork student_small/student_small: 30% | 492 | FPS: 27.31 | ETA: 00:00:42
+[F[2KNetwork student_small/student_small: 31% | 519 | FPS: 27.29 | ETA: 00:00:41
+[F[2KNetwork student_small/student_small: 33% | 547 | FPS: 27.32 | ETA: 00:00:40
+[F[2KNetwork student_small/student_small: 35% | 574 | FPS: 27.31 | ETA: 00:00:39
+[F[2KNetwork student_small/student_small: 36% | 601 | FPS: 27.29 | ETA: 00:00:38
+[F[2KNetwork student_small/student_small: 38% | 629 | FPS: 27.32 | ETA: 00:00:37
+[F[2KNetwork student_small/student_small: 40% | 656 | FPS: 27.31 | ETA: 00:00:36
+[F[2KNetwork student_small/student_small: 41% | 683 | FPS: 27.29 | ETA: 00:00:35
+[F[2KNetwork student_small/student_small: 43% | 711 | FPS: 27.32 | ETA: 00:00:34
+[F[2KNetwork student_small/student_small: 45% | 738 | FPS: 27.31 | ETA: 00:00:33
+[F[2KNetwork student_small/student_small: 46% | 765 | FPS: 27.29 | ETA: 00:00:32
+[F[2KNetwork student_small/student_small: 48% | 793 | FPS: 27.32 | ETA: 00:00:31
+[F[2KNetwork student_small/student_small: 50% | 820 | FPS: 27.31 | ETA: 00:00:30
+[F[2KNetwork student_small/student_small: 51% | 847 | FPS: 27.30 | ETA: 00:00:29
+[F[2KNetwork student_small/student_small: 53% | 875 | FPS: 27.32 | ETA: 00:00:28
+[F[2KNetwork student_small/student_small: 55% | 902 | FPS: 27.31 | ETA: 00:00:27
+[F[2KNetwork student_small/student_small: 56% | 930 | FPS: 27.32 | ETA: 00:00:26
+[F[2KNetwork student_small/student_small: 58% | 957 | FPS: 27.31 | ETA: 00:00:25
+[F[2KNetwork student_small/student_small: 60% | 984 | FPS: 27.31 | ETA: 00:00:24
+[F[2KNetwork student_small/student_small: 61% | 1012 | FPS: 27.32 | ETA: 00:00:23
+[F[2KNetwork student_small/student_small: 63% | 1039 | FPS: 27.31 | ETA: 00:00:22
+[F[2KNetwork student_small/student_small: 65% | 1066 | FPS: 27.31 | ETA: 00:00:21
+[F[2KNetwork student_small/student_small: 66% | 1094 | FPS: 27.32 | ETA: 00:00:20
+[F[2KNetwork student_small/student_small: 68% | 1121 | FPS: 27.31 | ETA: 00:00:19
+[F[2KNetwork student_small/student_small: 70% | 1148 | FPS: 27.31 | ETA: 00:00:18
+[F[2KNetwork student_small/student_small: 71% | 1176 | FPS: 27.32 | ETA: 00:00:17
+[F[2KNetwork student_small/student_small: 73% | 1203 | FPS: 27.31 | ETA: 00:00:16
+[F[2KNetwork student_small/student_small: 75% | 1230 | FPS: 27.30 | ETA: 00:00:15
+[F[2KNetwork student_small/student_small: 76% | 1258 | FPS: 27.32 | ETA: 00:00:14
+[F[2KNetwork student_small/student_small: 78% | 1285 | FPS: 27.31 | ETA: 00:00:13
+[F[2KNetwork student_small/student_small: 80% | 1313 | FPS: 27.33 | ETA: 00:00:12
+[F[2KNetwork student_small/student_small: 81% | 1340 | FPS: 27.32 | ETA: 00:00:11
+[F[2KNetwork student_small/student_small: 83% | 1367 | FPS: 27.31 | ETA: 00:00:10
+[F[2KNetwork student_small/student_small: 85% | 1395 | FPS: 27.32 | ETA: 00:00:09
+[F[2KNetwork student_small/student_small: 86% | 1422 | FPS: 27.32 | ETA: 00:00:08
+[F[2KNetwork student_small/student_small: 88% | 1449 | FPS: 27.31 | ETA: 00:00:07
+[F[2KNetwork student_small/student_small: 90% | 1477 | FPS: 27.32 | ETA: 00:00:06
+[F[2KNetwork student_small/student_small: 91% | 1504 | FPS: 27.32 | ETA: 00:00:05
+[F[2KNetwork student_small/student_small: 93% | 1531 | FPS: 27.31 | ETA: 00:00:04
+[F[2KNetwork student_small/student_small: 95% | 1559 | FPS: 27.32 | ETA: 00:00:03
+[F[2KNetwork student_small/student_small: 96% | 1586 | FPS: 27.32 | ETA: 00:00:02
+[F[2KNetwork student_small/student_small: 98% | 1613 | FPS: 27.31 | ETA: 00:00:01
+[F[2KNetwork student_small/student_small: 100% | 1639 | FPS: 27.30 | ETA: 00:00:00
+Measuring HW Latency
+Network student_small/student_small: 1% | 27 | HW Latency: 36.25 ms | ETA: 00:00:59
+[F[2KNetwork student_small/student_small: 3% | 54 | HW Latency: 36.25 ms | ETA: 00:00:58
+[F[2KNetwork student_small/student_small: 5% | 81 | HW Latency: 36.25 ms | ETA: 00:00:57
+[F[2KNetwork student_small/student_small: 6% | 109 | HW Latency: 36.25 ms | ETA: 00:00:56
+[F[2KNetwork student_small/student_small: 8% | 136 | HW Latency: 36.25 ms | ETA: 00:00:55
+[F[2KNetwork student_small/student_small: 10% | 163 | HW Latency: 36.25 ms | ETA: 00:00:54
+[F[2KNetwork student_small/student_small: 11% | 191 | HW Latency: 36.25 ms | ETA: 00:00:53
+[F[2KNetwork student_small/student_small: 13% | 218 | HW Latency: 36.25 ms | ETA: 00:00:52
+[F[2KNetwork student_small/student_small: 15% | 245 | HW Latency: 36.26 ms | ETA: 00:00:51
+[F[2KNetwork student_small/student_small: 16% | 273 | HW Latency: 36.26 ms | ETA: 00:00:50
+[F[2KNetwork student_small/student_small: 18% | 300 | HW Latency: 36.26 ms | ETA: 00:00:49
+[F[2KNetwork student_small/student_small: 20% | 327 | HW Latency: 36.26 ms | ETA: 00:00:48
+[F[2KNetwork student_small/student_small: 21% | 355 | HW Latency: 36.26 ms | ETA: 00:00:47
+[F[2KNetwork student_small/student_small: 23% | 382 | HW Latency: 36.26 ms | ETA: 00:00:46
+[F[2KNetwork student_small/student_small: 25% | 409 | HW Latency: 36.26 ms | ETA: 00:00:45
+[F[2KNetwork student_small/student_small: 26% | 437 | HW Latency: 36.26 ms | ETA: 00:00:44
+[F[2KNetwork student_small/student_small: 28% | 464 | HW Latency: 36.26 ms | ETA: 00:00:43
+[F[2KNetwork student_small/student_small: 30% | 492 | HW Latency: 36.26 ms | ETA: 00:00:42
+[F[2KNetwork student_small/student_small: 31% | 519 | HW Latency: 36.26 ms | ETA: 00:00:41
+[F[2KNetwork student_small/student_small: 33% | 546 | HW Latency: 36.26 ms | ETA: 00:00:40
+[F[2KNetwork student_small/student_small: 35% | 574 | HW Latency: 36.26 ms | ETA: 00:00:39
+[F[2KNetwork student_small/student_small: 36% | 601 | HW Latency: 36.26 ms | ETA: 00:00:38
+[F[2KNetwork student_small/student_small: 38% | 628 | HW Latency: 36.26 ms | ETA: 00:00:37
+[F[2KNetwork student_small/student_small: 40% | 656 | HW Latency: 36.26 ms | ETA: 00:00:36
+[F[2KNetwork student_small/student_small: 41% | 683 | HW Latency: 36.26 ms | ETA: 00:00:35
+[F[2KNetwork student_small/student_small: 43% | 710 | HW Latency: 36.26 ms | ETA: 00:00:34
+[F[2KNetwork student_small/student_small: 45% | 738 | HW Latency: 36.26 ms | ETA: 00:00:33
+[F[2KNetwork student_small/student_small: 46% | 765 | HW Latency: 36.26 ms | ETA: 00:00:32
+[F[2KNetwork student_small/student_small: 48% | 792 | HW Latency: 36.26 ms | ETA: 00:00:31
+[F[2KNetwork student_small/student_small: 50% | 820 | HW Latency: 36.26 ms | ETA: 00:00:30
+[F[2KNetwork student_small/student_small: 51% | 847 | HW Latency: 36.26 ms | ETA: 00:00:29
+[F[2KNetwork student_small/student_small: 53% | 874 | HW Latency: 36.26 ms | ETA: 00:00:28
+[F[2KNetwork student_small/student_small: 55% | 902 | HW Latency: 36.26 ms | ETA: 00:00:27
+[F[2KNetwork student_small/student_small: 56% | 929 | HW Latency: 36.26 ms | ETA: 00:00:26
+[F[2KNetwork student_small/student_small: 58% | 956 | HW Latency: 36.26 ms | ETA: 00:00:25
+[F[2KNetwork student_small/student_small: 60% | 984 | HW Latency: 36.26 ms | ETA: 00:00:24
+[F[2KNetwork student_small/student_small: 61% | 1011 | HW Latency: 36.26 ms | ETA: 00:00:23
+[F[2KNetwork student_small/student_small: 63% | 1038 | HW Latency: 36.26 ms | ETA: 00:00:22
+[F[2KNetwork student_small/student_small: 65% | 1066 | HW Latency: 36.26 ms | ETA: 00:00:21
+[F[2KNetwork student_small/student_small: 66% | 1093 | HW Latency: 36.26 ms | ETA: 00:00:20
+[F[2KNetwork student_small/student_small: 68% | 1120 | HW Latency: 36.26 ms | ETA: 00:00:19
+[F[2KNetwork student_small/student_small: 70% | 1148 | HW Latency: 36.26 ms | ETA: 00:00:18
+[F[2KNetwork student_small/student_small: 71% | 1175 | HW Latency: 36.26 ms | ETA: 00:00:17
+[F[2KNetwork student_small/student_small: 73% | 1202 | HW Latency: 36.26 ms | ETA: 00:00:16
+[F[2KNetwork student_small/student_small: 75% | 1230 | HW Latency: 36.26 ms | ETA: 00:00:15
+[F[2KNetwork student_small/student_small: 76% | 1257 | HW Latency: 36.26 ms | ETA: 00:00:14
+[F[2KNetwork student_small/student_small: 78% | 1285 | HW Latency: 36.26 ms | ETA: 00:00:13
+[F[2KNetwork student_small/student_small: 80% | 1312 | HW Latency: 36.26 ms | ETA: 00:00:12
+[F[2KNetwork student_small/student_small: 81% | 1339 | HW Latency: 36.26 ms | ETA: 00:00:11
+[F[2KNetwork student_small/student_small: 83% | 1366 | HW Latency: 36.26 ms | ETA: 00:00:10
+[F[2KNetwork student_small/student_small: 85% | 1394 | HW Latency: 36.26 ms | ETA: 00:00:09
+[F[2KNetwork student_small/student_small: 86% | 1421 | HW Latency: 36.26 ms | ETA: 00:00:08
+[F[2KNetwork student_small/student_small: 88% | 1448 | HW Latency: 36.26 ms | ETA: 00:00:07
+[F[2KNetwork student_small/student_small: 90% | 1476 | HW Latency: 36.26 ms | ETA: 00:00:06
+[F[2KNetwork student_small/student_small: 91% | 1503 | HW Latency: 36.26 ms | ETA: 00:00:05
+[F[2KNetwork student_small/student_small: 93% | 1530 | HW Latency: 36.26 ms | ETA: 00:00:04
+[F[2KNetwork student_small/student_small: 95% | 1558 | HW Latency: 36.26 ms | ETA: 00:00:03
+[F[2KNetwork student_small/student_small: 96% | 1585 | HW Latency: 36.26 ms | ETA: 00:00:02
+[F[2KNetwork student_small/student_small: 98% | 1612 | HW Latency: 36.26 ms | ETA: 00:00:01
+[F[2KNetwork student_small/student_small: 100% | 1638 | HW Latency: 36.26 ms | ETA: 00:00:00
+
+=======
+Summary
+=======
+FPS     (hw_only)                 = 27.3184
+        (streaming)               = 27.3021
+Latency (hw)                      = 36.2592 ms

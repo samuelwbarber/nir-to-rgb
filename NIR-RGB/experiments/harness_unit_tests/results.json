@@ -1,0 +1,66 @@
+{
+  "passing": 10,
+  "failing": 0,
+  "fixtures": [
+    {
+      "fixture": "NIR identity",
+      "expected": "0",
+      "observed": 0.0,
+      "pass": true
+    },
+    {
+      "fixture": "RGB identity",
+      "expected": "1",
+      "observed": 1.0,
+      "pass": true
+    },
+    {
+      "fixture": "Negative control",
+      "expected": "negative",
+      "observed": -0.19999999999999996,
+      "pass": true
+    },
+    {
+      "fixture": "Zero denominator",
+      "expected": "undefined",
+      "observed": "undefined",
+      "pass": true
+    },
+    {
+      "fixture": "Empty reference detections",
+      "expected": "undefined",
+      "observed": "undefined",
+      "pass": true
+    },
+    {
+      "fixture": "Empty translated detections",
+      "expected": "0",
+      "observed": 0.0,
+      "pass": true
+    },
+    {
+      "fixture": "Duplicate candidate match",
+      "expected": "one match",
+      "observed": 1,
+      "pass": true
+    },
+    {
+      "fixture": "IoU threshold boundary",
+      "expected": "included at IoU=0.5",
+      "observed": 1,
+      "pass": true
+    },
+    {
+      "fixture": "Reordered images",
+      "expected": "same aggregate",
+      "observed": 0.0,
+      "pass": true
+    },
+    {
+      "fixture": "Lower-is-better metric",
+      "expected": "closure=0.5",
+      "observed": 0.5,
+      "pass": true
+    }
+  ]
+}

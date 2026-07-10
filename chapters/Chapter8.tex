@@ -1,0 +1,112 @@
+\doublespacing % Do not change - required
+
+\chapter{Critical Evaluation}
+\label{ch:evaluation}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% IMPORTANT
+\begin{spacing}{1} %THESE FOUR
+\minitoc % LINES MUST APPEAR IN
+\end{spacing} % EVERY
+\thesisspacing % CHAPTER
+% COPY THEM IN ANY NEW CHAPTER
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Achievement of Objectives}
+\label{sec:eval_objectives}
+
+The project met its modelling objective. The final assessment is summarised in \autoref{tab:eval_requirements}. All quality and downstream figures are computed over the full 1{,}255-pair held-out test split.
+
+\paragraph{Paired dataset.}
+The dataset objective was met in full. The final integrity audit found no missing counterparts, unreadable files, channel mismatches or duplicate image hashes, and the scale proved sufficient to train the teacher and distil the student without exhausting the data.
+
+\paragraph{Translator quality and downstream recovery.}
+The final NAFNet teacher improves on both raw NIR and the controlled Pix2Pix baseline on every fidelity metric, and both the FP32 and INT8 students produce positive gap closure on all five primary tasks and on the independent DINOv2-L and SigLIP2 embedding probes. This satisfies S2 in full, where the pre-specified threshold required only three of the five tasks. It does \emph{not} establish absolute detection or segmentation accuracy, since the reference outputs are predictions from the same frozen models on native RGB rather than human annotations. The recovery is also uneven. The detection closures (+0.077 and +0.072 at mAP@0.5) are several times smaller than the segmentation and depth closures (+0.351 to +0.587), making the detectors the weakest primary results. A plausible cause is that detection depends on small objects and fine texture, which translation reproduces least faithfully, whereas segmentation and depth lean on the large-scale structure the translator preserves well.
+
+\paragraph{Edge deployment.}
+The distillation, export and quantisation path produced a deployable artefact whose numerical equivalence, determinism and test-set quality were verified off-device, and on-device validation confirms the throughput, memory and thermal requirements (Section~\ref{sec:pi_deployment}). The CPU pass is marginal, however. The mean latency meets the 200\,ms budget but the 95th percentile does not, so real-time CPU deployment has no headroom and the NPU path is the recommended backend.
+
+\begin{table}[!htbp]
+\centering
+\footnotesize
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{p{0.08\linewidth}p{0.27\linewidth}p{0.49\linewidth}p{0.08\linewidth}}
+\hline
+\textbf{Req.} & \textbf{Acceptance condition} & \textbf{Final evidence} & \textbf{Status} \\
+\hline
+F1 & Same-size three-channel RGB output & Valid $256\times256$ RGB output for all 1{,}255 test inputs & Pass \\
+F2 & Geometry preserved & Homography-aligned pairing audited and object boundaries unchanged in translated output & Pass \\
+F3 & Deterministic output & Zero mismatched 8-bit pixels over repeated tests of PyTorch, ONNX and LiteRT artefacts & Pass \\
+F4 & Drop-in RGB interface & Frozen RGB models accepted translated output without retraining & Pass \\
+N1 & At least 5\,FPS model-inference throughput on the Pi~5 & 5.05\,FPS mean on the CPU (mixed-INT8 LiteRT; p95 latency above the 200\,ms budget) and 27.2\,FPS on the Hailo-8L NPU & Pass (marginal on CPU) \\
+N2 & Loads and runs within device memory without swapping & 2.3\,MB artefact, peak inference memory under 50\,MB, zero swap observed & Pass \\
+S1 & Paired, aligned dataset at sufficient scale & 12{,}536 homography-aligned pairs collected and integrity-audited & Pass \\
+S2 & Positive closure on at least three of five behavioural tasks, with no task below its raw-NIR baseline & Positive closure on all five tasks for both FP32 and INT8 students; no task below raw NIR & Pass \\
+S3 & Deployed student meets the 5\,FPS target on the Pi~5 & Verified on-device on both the CPU and NPU backends & Pass \\
+\hline
+\end{tabular}
+}
+\caption{Assessment of functional and core objectives. F denotes functional requirements, N non-functional requirements, and S success criteria for the main modelling objective.}
+\label{tab:eval_requirements}
+\end{table}
+
+\section{Comparison with Existing Approaches}
+\label{sec:eval_priorwork}
+
+The strongest controlled comparison is the internal Pix2Pix baseline, which uses the same paired data, canonical test split, input resolution and evaluation panel as the final teacher, and its outcome is assessed in Section~\ref{sec:eval_designbets}. Two qualifications apply. First, the baseline received substantially less tuning effort than the final teacher. It is a single run of the standard recipe rather than the product of an ablation campaign, so its result should be read as what the conventional formulation achieves out of the box rather than as the ceiling of GAN-based methods. Second, the NAFNet ablations are single training runs each, and the reported confidence intervals capture per-image variation on the test split, not seed-to-seed training variance, so the component-level conclusions are exploratory, not confirmatory.
+
+Direct numerical comparison with published NIR-to-RGB methods would be misleading. Existing work uses different sensors, spectral cut-offs, scene distributions, alignment quality and evaluation protocols, so the report compares design principles and deployment constraints in Chapter~\ref{ch:background} rather than presenting cross-dataset raw scores as if they were controlled benchmarks.
+
+Fine-tuning each downstream network on NIR would be another plausible alternative, but it was outside the project scope and was not evaluated. The demonstrated advantage of the translator is thus its compatibility with unchanged RGB models; superiority to a fully labelled, task-specific NIR retraining pipeline has not been shown.
+
+\section{Assessment of Design Decisions}
+\label{sec:eval_designbets}
+
+\paragraph{Shared-aperture capture rig.}
+The rig enabled collection of a much larger project-specific paired dataset than the public datasets considered in Section~\ref{sec:datasets}, and the optical design removes the principal source of depth-dependent parallax.
+
+\paragraph{NAFNet over Pix2Pix.}
+This is the decision the evidence supports most directly. The GAN baseline equals the student on PSNR and SSIM yet leaves downstream behaviour near its raw-NIR level (Section~\ref{sec:res_gapclosure}), while the NAFNet path closes most of that gap. The teacher is larger than Pix2Pix, but it is a training-time model only, and after distillation the deployed student is roughly $32\times$ smaller than Pix2Pix, so the NAFNet route gives both the stronger downstream result and the only edge-deployable artefact in the comparison.
+
+\paragraph{Foundation-feature supervision.}
+The final teacher and feature-distilled student retain strong agreement on evaluators that were not used in their losses, including YOLOv8m, RT-DETR-L, SegFormer-Cityscapes, DINOv2-L and SigLIP2, consistent with the intended task-agnostic effect of feature supervision. This does not isolate its causal contribution completely, since the DINOv2-S and CLIP-family test metrics are partly non-independent because related backbones supplied training losses and CLIP was used for checkpoint selection, but the evidence overall supports feature supervision as useful.
+
+\paragraph{Teacher--student distillation.}
+This was the most clearly successful deployment decision. The compression is not free, with the selected student losing 2.07\,dB PSNR relative to the teacher and some detector agreement, but the result is a materially smaller model whose remaining quality is aligned with the stated downstream objective.
+
+\paragraph{Post-training quantisation.}
+PTQ retains positive closure on every primary task, though its quality cost is measurable. Relative to the FP32 student, PSNR falls by 0.5\,dB, LPIPS increases by 0.007, normalised depth error rises by 7\% and CLIP-FID by 26\%, so PTQ is an acceptable first deployment path rather than a lossless conversion. The LiteRT/XNNPACK export path is deterministic and numerically validated, avoiding the layout problem encountered with earlier ONNX-to-TFLite conversion.
+
+\paragraph{Hailo-8L NPU path.}
+The NPU path (Sections~\ref{sec:impl_hailo} and~\ref{sec:res_edge}) both relaxes the latency budget, running the selected student $5.4\times$ faster than the CPU, and opens headroom for the stronger width-32 student that the CPU cannot run interactively. Its main cost is fragility, since compilation required graph surgery for three unsupported operators and depends on a specific vendor compiler version.
+
+\section{Limitations and Generalisation}
+\label{sec:eval_limitations}
+
+The dataset's design prioritised privacy by excluding personally identifiable information during capture and processing. This choice prevents evaluation on person-centric downstream tasks such as hand pose estimation, face recognition and person re-identification, which would otherwise be useful measures of translation fidelity. The gap matters because person is already among the weakest classes in the segmentation results (Section~\ref{sec:res_seg}), so the task family most in need of scrutiny is the one the dataset cannot evaluate. Any deployment requiring person detection or tracking would need a separate, ethically governed and human-annotated dataset.
+
+The dataset is also geographically and environmentally constrained. Capture occurred over outdoor London streets on a single camera rig, so the results do not establish generalisation to other cities with different architecture and vegetation, indoor environments, rural areas, or different climate conditions. The dataset diversity in lighting and weather is limited to what was encountered during the capture campaign, and robustness testing relied on synthetic perturbations rather than naturally occurring variations.
+
+The cross-modality experiments of Section~\ref{sec:res_modality_extension} bound the recipe's generality. It transfers to thermal imagery without modification, recovering segmentation behaviour on static scene classes, but it breaks down on SAR, where pixel metrics collapse and downstream gains are marginal. The approach should therefore be read as applicable to modalities that share sufficient spectral structure with RGB; it is not a universal cross-modal adapter.
+
+Finally, robustness testing revealed a clear operating envelope beyond which translation quality degrades sharply. Mild changes in exposure and gamma are handled well, but Gaussian blur with standard deviation above 1 pixel and additive noise above 0.01 cause severe degradation in pixel and embedding-agreement metrics (Section~\ref{sec:res_robustness}). This limits deployment to scenarios where input image quality can be monitored and poor-quality frames rejected.
+
+\section{Novelty}
+\label{sec:eval_novelty}
+
+The individual building blocks of this project, NAFNet, knowledge distillation, INT8 quantisation and frozen foundation models, are all published work. The novelty lies in what they were combined to do, and in the evaluation standard the system was held to.
+
+\paragraph{A restoration backbone for cross-spectral synthesis.}
+The literature reviewed for this report (Section~\ref{sec:i2i_nafnet}) did not identify a previous use of NAFNet for NIR$\rightarrow$RGB translation. Prior work in this direction relies on conditional GANs and, more recently, diffusion models. Choosing a deterministic, activation-free restoration network for a task that requires inferring missing spectral information was a deliberate risk, taken for its export and quantisation behaviour, and the results justify it (Section~\ref{sec:eval_designbets}).
+
+\paragraph{Foundation-ensemble supervision in place of the perceptual loss.}
+The teacher replaces the standard single VGG perceptual term with simultaneous feature matching against DINOv2, CLIP and ResNet-50, with checkpoints selected by validation CLIP cosine similarity rather than PSNR. Pix2Next~\cite{pix2next2024}, the closest prior work, injects features from one pretrained model into its generator architecture. Here the ensemble is used purely as a training signal on an unmodified backbone, in the reverse translation direction, and the No-FM ablation shows the term is essential to downstream agreement, not incidental.
+
+\paragraph{Simultaneous homography-aligned paired capture at scale.}
+The shared-aperture beam-splitter rig produces pairs that are simultaneous and related by a single depth-independent homography, which none of the public NIR/RGB datasets reviewed in Section~\ref{sec:datasets} provide. Built from a Raspberry~Pi and two commodity camera modules, it yielded 12{,}536 homography-aligned training pairs, and the same low-cost design is reusable for other cross-spectral pairings.
+
+\paragraph{Behaviour-centred, annotation-free evaluation.}
+The gap-closure harness makes recovery of frozen-model behaviour rather than image quality the primary success criterion, and measures it across detection, segmentation, depth and embedding probes without requiring human task annotations. Pix2Next applies this idea to a single detector. Generalising it to a task-spanning panel, with independent probes held out of the training objective, exposed the report's main finding, that a translation can match on pixel metrics while leaving downstream behaviour largely unrestored (Section~\ref{sec:res_gapclosure}).
+
+

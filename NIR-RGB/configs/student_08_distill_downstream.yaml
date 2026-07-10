@@ -1,0 +1,103 @@
+project:
+  name: nir2rgb
+  experiment: student_08_distill_downstream
+  output_dir: experiments
+data:
+  nir_dir: data/nir
+  rgb_dir: data/rgb
+  mp_cache: null
+  extensions: [.png, .jpg, .jpeg, .tif, .tiff]
+  image_size: 256
+  in_channels: 3
+  out_channels: 3
+split:
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  seed: 42
+  scene_regex: null
+augment:
+  hflip: true
+  rotate_max_deg: 10.0
+  scale_min: 0.9
+  scale_max: 1.15
+  nir_brightness: 0.2
+  nir_gamma_min: 0.8
+  nir_gamma_max: 1.2
+# Student: NAFNet width=16, ~1.5B FLOPs @ 256x256 → ~10-15fps on RPi5 via ONNX/XNNPACK.
+model:
+  generator:
+    type: nafnet
+    width: 16
+    enc_blk_nums: [1, 1, 1, 2]
+    middle_blk_num: 2
+    dec_blk_nums: [1, 1, 1, 1]
+    dropout: 0.0
+    global_residual: false
+    output_tanh: true
+  discriminator:
+    type: patchgan
+    base_channels: 32
+    n_layers: 3
+# Frozen teacher: ablation_08 (NAFNet width=64, same arch as forward runs).
+distill:
+  teacher_checkpoint: experiments/ablation_08_foundation_ensemble_aggressive/checkpoints/best.pth
+  teacher:
+    type: nafnet
+    width: 64
+    enc_blk_nums: [2, 2, 4, 8]
+    middle_blk_num: 12
+    dec_blk_nums: [2, 2, 2, 2]
+    dropout: 0.0
+    global_residual: false
+    output_tanh: true
+loss:
+  # KD: match teacher output pixel-by-pixel (primary signal).
+  kd_pixel_weight: 50.0
+  # GT anchor: small — prevents drift if teacher has artefacts on any sample.
+  gt_l1_weight: 5.0
+  # Downstream: same CLIP+DINOv2 objective as ablation_08, lighter weights
+  # since KD is already doing most of the work. Ensures student is directly
+  # optimised for downstream representations, not just mimicking pixels.
+  perceptual_weight: 0.0
+  gan_weight: 0.0
+  msssim_weight: 0.0
+  region_l1_boost: 1.0
+  perceptual_layers: [3, 8, 15, 22]
+  gan_type: lsgan
+  feature_map_warmup_epochs: 0
+  feature_map_input_size: 224
+  feature_map_extractors:
+  - name: dinov2_vits14
+    weight: 20.0
+  - name: clip_vitb32
+    weight: 10.0
+optim:
+  generator:
+    lr: 2.0e-04
+    betas: [0.9, 0.99]
+  discriminator:
+    lr: 2.0e-04
+    betas: [0.5, 0.999]
+train:
+  batch_size: 8
+  num_workers: 4
+  epochs: 125
+  amp: false
+  log_interval: 100
+  val_interval_epochs: 1
+  save_interval_epochs: 5
+  keep_last_checkpoints: 3
+  sample_count: 8
+  grad_clip: 1.0
+  resume: experiments/student_08_distill_downstream/checkpoints/latest.pth
+  resume_mode: full
+  best_metric: val/clip_cos
+  best_metric_mode: max
+eval:
+  metrics:
+  - psnr
+  - ssim
+  - lpips
+  lpips_net: alex
+device: cuda

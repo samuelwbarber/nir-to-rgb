@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why SSIM is a flawed metric for semantics</title>
+<style>
+  :root{
+    --icl:#0000cd; --ink:#13151a; --muted:#5b6270;
+    --good:#0a8a46; --bad:#c81e1e; --card:#ffffff; --bg:#eef1f7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;
+    padding:28px 18px 40px}
+  .wrap{max-width:1060px;margin:0 auto}
+  h1{color:var(--icl);font-size:26px;margin:0 0 4px;font-weight:800;letter-spacing:-.2px}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 22px}
+  .row{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+  .card{background:var(--card);border-radius:14px;padding:14px 14px 16px;
+    box-shadow:0 2px 10px rgba(20,30,60,.08);width:300px;text-align:center;border:1px solid #e4e8f0}
+  .card.ref{border:2px solid var(--icl)}
+  canvas{width:256px;height:256px;border-radius:8px;background:#cdd6e6;display:block;margin:0 auto}
+  .label{font-weight:700;font-size:15px;margin:12px 0 2px}
+  .desc{color:var(--muted);font-size:12.5px;min-height:46px;margin:0 0 8px;line-height:1.35}
+  .ssim{font-size:30px;font-weight:800;letter-spacing:-.5px}
+  .ssim small{font-size:14px;font-weight:600;color:var(--muted)}
+  .badge{display:inline-block;margin-top:7px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+  .badge.win{background:#e3f6ec;color:var(--good)}
+  .badge.lose{background:#fde7e7;color:var(--bad)}
+  .meta{font-size:11.5px;color:var(--muted);margin-top:6px}
+  .takeaway{margin:26px auto 0;max-width:880px;background:var(--icl);color:#fff;border-radius:14px;
+    padding:18px 22px;font-size:15.5px;line-height:1.5}
+  .takeaway b{color:#ffd34d}
+  .foot{color:var(--muted);font-size:12.5px;text-align:center;margin-top:14px}
+  .arrowline{text-align:center;color:var(--muted);font-size:13px;margin:12px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SSIM is colour-blind &mdash; and colour can be the whole meaning</h1>
+  <p class="sub">SSIM compares <b>luminance structure</b>, not colour. SSIM is computed live (1.000 = "identical"). Same scene each time.</p>
+
+  <div class="row">
+    <div class="card ref">
+      <canvas id="cRef" width="256" height="256"></canvas>
+      <div class="label">Reference: GREEN signal</div>
+      <div class="desc">Go. This is the ground truth.</div>
+      <div class="ssim">&mdash;</div>
+      <div class="meta" id="lRef"></div>
+    </div>
+
+    <div class="card">
+      <canvas id="cRed" width="256" height="256"></canvas>
+      <div class="label">RED signal (opposite meaning)</div>
+      <div class="desc">Stop. The <b>opposite</b> instruction &mdash; but tuned to the same brightness as green.</div>
+      <div class="ssim" id="sRed">&hellip;</div>
+      <div class="badge win" id="bRed">&nbsp;</div>
+      <div class="meta" id="lRed"></div>
+    </div>
+
+    <div class="card">
+      <canvas id="cDim" width="256" height="256"></canvas>
+      <div class="label">Same GREEN, darker exposure</div>
+      <div class="desc">Identical meaning (still go), just a dimmer, slightly softer photo of the same scene.</div>
+      <div class="ssim" id="sDim">&hellip;</div>
+      <div class="badge lose" id="bDim">&nbsp;</div>
+      <div class="meta" id="lDim"></div>
+    </div>
+  </div>
+
+  <div class="arrowline" id="verdict"></div>
+
+  <div class="takeaway">
+    SSIM scores the <b>red "stop"</b> as almost identical to green, because it ignores colour and only sees the
+    bright disk in the same place. Yet it marks a <b>harmless darker exposure of the correct green light</b> as a worse match.
+    For NIR&rarr;RGB, colour often <b>is</b> the meaning (signals, vegetation, materials), so a structural metric cannot
+    certify it. This is why the project measures <b>downstream behaviour (gap closure)</b>, not SSIM.
+  </div>
+  <p class="foot">Real SSIM: Gaussian 11&times;11 window, C1=(0.01&middot;255)&sup2;, C2=(0.03&middot;255)&sup2;, computed on luminance in your browser.</p>
+</div>
+
+<script>
+const W=256,H=256;
+const SKY_TOP=[150,195,235], SKY_BOT=[205,225,245], GROUND=[120,165,95];
+const POST=[80,84,92], HOUSING=[40,42,48];
+// Green and red tuned to (near) equal luminance: 0.299R+0.587G+0.114B
+const GREEN=[20,120,40];   // luma ~ 81.0
+const RED  =[190,35,35];   // luma ~ 81.3
+const css=a=>`rgb(${a.join(',')})`;
+const luma=a=>0.299*a[0]+0.587*a[1]+0.114*a[2];
+
+function bg(ctx){
+  for(let y=0;y<H;y++){
+    const t=y/H;
+    const r=Math.round(SKY_TOP[0]+(SKY_BOT[0]-SKY_TOP[0])*t);
+    const g=Math.round(SKY_TOP[1]+(SKY_BOT[1]-SKY_TOP[1])*t);
+    const b=Math.round(SKY_TOP[2]+(SKY_BOT[2]-SKY_TOP[2])*t);
+    ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,y,W,1);
+  }
+  ctx.fillStyle=css(GROUND); ctx.fillRect(0,210,W,H-210);
+}
+function signal(ctx,lampColor){
+  // post
+  ctx.fillStyle=css(POST); ctx.fillRect(122,120,12,96);
+  // housing
+  ctx.fillStyle=css(HOUSING);
+  roundRect(ctx,96,40,64,86,14); ctx.fill();
+  // single lamp in a FIXED position (so only colour changes, not structure)
+  ctx.fillStyle=css(lampColor);
+  ctx.beginPath(); ctx.arc(128,83,24,0,7); ctx.fill();
+  // soft glow
+  ctx.globalAlpha=0.25; ctx.beginPath(); ctx.arc(128,83,30,0,7); ctx.fill(); ctx.globalAlpha=1;
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+
+// draw reference (green) and red on their canvases
+const refCtx=document.getElementById('cRef').getContext('2d');
+const redCtx=document.getElementById('cRed').getContext('2d');
+const dimCtx=document.getElementById('cDim').getContext('2d');
+bg(refCtx); signal(refCtx,GREEN);
+bg(redCtx); signal(redCtx,RED);
+
+// dim+soften variant: render green scene offscreen, draw blurred + darkened
+const off=document.createElement('canvas'); off.width=W; off.height=H;
+const offc=off.getContext('2d'); bg(offc); signal(offc,GREEN);
+dimCtx.filter='blur(1.8px)'; dimCtx.drawImage(off,0,0); dimCtx.filter='none';
+dimCtx.fillStyle='rgba(0,0,0,0.40)'; dimCtx.fillRect(0,0,W,H); // ~0.6x luminance
+
+// ---------- SSIM (Gaussian-window, on luminance) ----------
+function toGray(d){
+  const g=new Float64Array(W*H);
+  for(let i=0,p=0;i<d.length;i+=4,p++) g[p]=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+  return g;
+}
+function gKernel(sigma){
+  const r=Math.ceil(sigma*3), k=new Float64Array(2*r+1); let s=0;
+  for(let i=-r;i<=r;i++){ const v=Math.exp(-(i*i)/(2*sigma*sigma)); k[i+r]=v; s+=v; }
+  for(let i=0;i<k.length;i++) k[i]/=s;
+  return {k,r};
+}
+function blur(src,sigma){
+  const {k,r}=gKernel(sigma);
+  const tmp=new Float64Array(W*H), out=new Float64Array(W*H);
+  // horizontal
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      let acc=0;
+      for(let j=-r;j<=r;j++){ let xx=x+j; if(xx<0)xx=0; if(xx>=W)xx=W-1; acc+=src[y*W+xx]*k[j+r]; }
+      tmp[y*W+x]=acc;
+    }
+  }
+  // vertical
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      let acc=0;
+      for(let j=-r;j<=r;j++){ let yy=y+j; if(yy<0)yy=0; if(yy>=H)yy=H-1; acc+=tmp[yy*W+x]*k[j+r]; }
+      out[y*W+x]=acc;
+    }
+  }
+  return out;
+}
+function mul(a,b){ const o=new Float64Array(a.length); for(let i=0;i<a.length;i++)o[i]=a[i]*b[i]; return o; }
+function ssim(gx,gy){
+  const sigma=1.5, C1=(0.01*255)**2, C2=(0.03*255)**2;
+  const mux=blur(gx,sigma), muy=blur(gy,sigma);
+  const mux2=mul(mux,mux), muy2=mul(muy,muy), muxy=mul(mux,muy);
+  const sx2=blur(mul(gx,gx),sigma), sy2=blur(mul(gy,gy),sigma), sxy=blur(mul(gx,gy),sigma);
+  let sum=0;
+  for(let i=0;i<gx.length;i++){
+    const vx=sx2[i]-mux2[i], vy=sy2[i]-muy2[i], vxy=sxy[i]-muxy[i];
+    const s=((2*muxy[i]+C1)*(2*vxy+C2))/((mux2[i]+muy2[i]+C1)*(vx+vy+C2));
+    sum+=s;
+  }
+  return sum/gx.length;
+}
+
+const gRef=toGray(refCtx.getImageData(0,0,W,H).data);
+const gRed=toGray(redCtx.getImageData(0,0,W,H).data);
+const gDim=toGray(dimCtx.getImageData(0,0,W,H).data);
+
+const sRed=ssim(gRef,gRed), sDim=ssim(gRef,gDim);
+const f=v=>v.toFixed(3);
+document.getElementById('sRed').innerHTML=f(sRed)+' <small>SSIM</small>';
+document.getElementById('sDim').innerHTML=f(sDim)+' <small>SSIM</small>';
+
+// luminance readouts (prove "same brightness")
+document.getElementById('lRef').textContent='lamp luma '+luma(GREEN).toFixed(1);
+document.getElementById('lRed').textContent='lamp luma '+luma(RED).toFixed(1)+' (same as green)';
+document.getElementById('lDim').textContent='whole image dimmed ~40%';
+
+const redHigher=sRed>sDim;
+document.getElementById('bRed').className='badge '+(redHigher?'win':'lose');
+document.getElementById('bRed').textContent=redHigher?'SSIM says: near-identical':'SSIM says: worse';
+document.getElementById('bDim').className='badge '+(redHigher?'lose':'win');
+document.getElementById('bDim').textContent=redHigher?'SSIM says: worse match':'SSIM says: closer';
+
+document.getElementById('verdict').innerHTML=
+  `SSIM rates the <b style="color:var(--bad)">opposite-meaning red light</b> `+
+  `<b>${(sRed-sDim>=0?'+':'')+(sRed-sDim).toFixed(3)}</b> higher than a faithful darker photo of the green light.`;
+</script>
+</body>
+</html>

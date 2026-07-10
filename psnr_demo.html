@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why PSNR is a flawed metric for semantics</title>
+<style>
+  :root{
+    --icl:#0000cd; --ink:#13151a; --muted:#5b6270;
+    --good:#0a8a46; --bad:#c81e1e; --card:#ffffff; --bg:#eef1f7;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Segoe UI",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; padding:28px 18px 40px;
+  }
+  .wrap{max-width:1060px;margin:0 auto}
+  h1{color:var(--icl);font-size:26px;margin:0 0 4px;font-weight:800;letter-spacing:-.2px}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 22px}
+  .row{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+  .card{
+    background:var(--card);border-radius:14px;padding:14px 14px 16px;
+    box-shadow:0 2px 10px rgba(20,30,60,.08);width:300px;text-align:center;
+    border:1px solid #e4e8f0;
+  }
+  .card.ref{border:2px solid var(--icl)}
+  canvas{
+    width:256px;height:256px;border-radius:8px;background:#cdd6e6;
+    image-rendering:auto;display:block;margin:0 auto;
+  }
+  .label{font-weight:700;font-size:15px;margin:12px 0 2px}
+  .desc{color:var(--muted);font-size:12.5px;min-height:32px;margin:0 0 8px;line-height:1.35}
+  .psnr{font-size:30px;font-weight:800;letter-spacing:-.5px}
+  .psnr small{font-size:14px;font-weight:600;color:var(--muted)}
+  .badge{
+    display:inline-block;margin-top:7px;font-size:12px;font-weight:700;
+    padding:3px 10px;border-radius:999px;
+  }
+  .badge.win{background:#e3f6ec;color:var(--good)}
+  .badge.lose{background:#fde7e7;color:var(--bad)}
+  .mse{font-size:11.5px;color:var(--muted);margin-top:6px}
+  .takeaway{
+    margin:26px auto 0;max-width:880px;background:var(--icl);color:#fff;
+    border-radius:14px;padding:18px 22px;font-size:15.5px;line-height:1.5;
+  }
+  .takeaway b{color:#ffd34d}
+  .foot{color:var(--muted);font-size:12.5px;text-align:center;margin-top:14px}
+  .arrowline{text-align:center;color:var(--muted);font-size:13px;margin:10px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PSNR rewards pixels, not meaning</h1>
+  <p class="sub">Three images compared to the same reference. PSNR is computed live from the actual pixels (higher = "closer" to PSNR).</p>
+
+  <div class="row">
+    <div class="card ref">
+      <canvas id="cRef" width="256" height="256"></canvas>
+      <div class="label">Reference</div>
+      <div class="desc">A person in a red shirt. This is the ground truth.</div>
+      <div class="psnr">&mdash;</div>
+    </div>
+
+    <div class="card">
+      <canvas id="cSame" width="256" height="256"></canvas>
+      <div class="label">Same person, blue shirt</div>
+      <div class="desc">Semantically the <b>same scene</b>: still this person, still standing here.</div>
+      <div class="psnr" id="pSame">&hellip;</div>
+      <div class="badge lose" id="bSame">&nbsp;</div>
+      <div class="mse" id="mSame"></div>
+    </div>
+
+    <div class="card">
+      <canvas id="cDiff" width="256" height="256"></canvas>
+      <div class="label">A red postbox</div>
+      <div class="desc">A <b>completely different thing</b>. No person at all &mdash; but it keeps the big red region.</div>
+      <div class="psnr" id="pDiff">&hellip;</div>
+      <div class="badge win" id="bDiff">&nbsp;</div>
+      <div class="mse" id="mDiff"></div>
+    </div>
+  </div>
+
+  <div class="arrowline" id="verdict"></div>
+
+  <div class="takeaway">
+    PSNR scores the <b>postbox</b> as the better match, even though it is not a person, while it scores the
+    <b>same person in a different shirt</b> as a poor match. A per-pixel metric cannot see meaning:
+    it just counts how many pixels happen to line up. This is why this project judges a translation by
+    <b>how much frozen-model behaviour it recovers (gap closure)</b>, not by PSNR.
+  </div>
+  <p class="foot">Numbers are real: PSNR = 10&middot;log<sub>10</sub>(255&sup2;/MSE), computed in your browser from the pixels above.</p>
+</div>
+
+<script>
+// ---- shared scene constants ----
+const W = 256, H = 256;
+const SKY_TOP = [150,195,235], SKY_BOT = [205,225,245];
+const GROUND  = [120,165,95];
+const SKIN    = [236,205,175];
+const SHIRT_RED  = [206,52,44];
+const SHIRT_BLUE = [44,92,206];
+const TROUSER = [46,46,58];
+const POSTBOX = [196,40,36];
+
+function bg(ctx){
+  // identical background in every image -> the "easy" pixels PSNR loves
+  for(let y=0;y<H;y++){
+    const t=y/H;
+    const r=Math.round(SKY_TOP[0]+(SKY_BOT[0]-SKY_TOP[0])*t);
+    const g=Math.round(SKY_TOP[1]+(SKY_BOT[1]-SKY_TOP[1])*t);
+    const b=Math.round(SKY_TOP[2]+(SKY_BOT[2]-SKY_TOP[2])*t);
+    ctx.fillStyle=`rgb(${r},${g},${b})`;
+    ctx.fillRect(0,y,W,1);
+  }
+  ctx.fillStyle=`rgb(${GROUND.join(',')})`;
+  ctx.fillRect(0,200,W,H-200);
+}
+const css = a => `rgb(${a.join(',')})`;
+
+// Big figure so the shirt fills the frame: recolouring it (blue) changes a large
+// fraction of pixels -> low PSNR. The postbox keeps that same big red body pixel
+// for pixel, so its PSNR stays high even though it is a different object.
+const TORSO = [76,84,104,116,16];            // x,y,w,h,r  (shared by person + postbox)
+function legs(ctx){
+  ctx.fillStyle=css(TROUSER);
+  ctx.fillRect(98,200,26,34);
+  ctx.fillRect(132,200,26,34);
+}
+function arms(ctx){                          // bare (skin) arms, so the blue shirt does not recolour them
+  ctx.fillStyle=css(SKIN);
+  roundRect(ctx,56,94,18,84,9); ctx.fill();
+  roundRect(ctx,182,94,18,84,9); ctx.fill();
+}
+function person(ctx, shirt){
+  legs(ctx);
+  ctx.fillStyle=css(shirt);                  // big torso (shirt)
+  roundRect(ctx,...TORSO); ctx.fill();
+  arms(ctx);
+  ctx.fillStyle=css(SKIN);                    // head
+  ctx.beginPath(); ctx.arc(128,58,26,0,7); ctx.fill();
+}
+function postbox(ctx){
+  // Royal Mail pillar box. The red body is the SAME rectangle as the torso
+  // (zero error -> high PSNR); the dome, slot, cypher, plate and base are kept
+  // small so they barely cost any error, yet they make it unmistakably a postbox.
+  ctx.fillStyle=css([44,46,52]);             // black base
+  ctx.fillRect(84,196,88,38);
+  ctx.fillStyle=css(SHIRT_RED);              // body == reference torso (zero error)
+  roundRect(ctx,...TORSO); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(128,84,52,20,0,Math.PI,2*Math.PI); ctx.fill(); // shallow domed cap
+  // posting slot
+  ctx.fillStyle="#121317"; ctx.fillRect(100,114,56,9);
+  // royal cypher
+  ctx.fillStyle="#e7c65a"; ctx.font="bold 13px Georgia,serif"; ctx.textAlign="center";
+  ctx.fillText("E II R",128,146);
+  // collection plate
+  ctx.fillStyle=css([216,208,190]); ctx.fillRect(108,158,40,12);
+  ctx.textAlign="start";
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+// ---- draw ----
+const refC=document.getElementById('cRef').getContext('2d');
+const sameC=document.getElementById('cSame').getContext('2d');
+const diffC=document.getElementById('cDiff').getContext('2d');
+bg(refC);  person(refC, SHIRT_RED);
+bg(sameC); person(sameC, SHIRT_BLUE);
+bg(diffC); postbox(diffC);
+
+// ---- PSNR ----
+function mse(a,b){
+  let s=0, n=0;
+  for(let i=0;i<a.length;i+=4){
+    for(let k=0;k<3;k++){ const d=a[i+k]-b[i+k]; s+=d*d; n++; }
+  }
+  return s/n;
+}
+function psnr(m){ return m===0 ? Infinity : 10*Math.log10(255*255/m); }
+
+const ref=refC.getImageData(0,0,W,H).data;
+const same=sameC.getImageData(0,0,W,H).data;
+const diff=diffC.getImageData(0,0,W,H).data;
+
+const mSame=mse(ref,same), mDiff=mse(ref,diff);
+const pS=psnr(mSame), pD=psnr(mDiff);
+
+const fmt = v => v.toFixed(2);
+document.getElementById('pSame').innerHTML = fmt(pS)+' <small>dB</small>';
+document.getElementById('pDiff').innerHTML = fmt(pD)+' <small>dB</small>';
+document.getElementById('mSame').textContent = 'MSE '+mSame.toFixed(0);
+document.getElementById('mDiff').textContent = 'MSE '+mDiff.toFixed(0);
+
+// badges: whichever PSNR is HIGHER is what PSNR "prefers"
+const sameWins = pS>pD;
+document.getElementById('bSame').className = 'badge '+(sameWins?'win':'lose');
+document.getElementById('bSame').textContent = sameWins?'PSNR says: closer':'PSNR says: worse match';
+document.getElementById('bDiff').className = 'badge '+(sameWins?'lose':'win');
+document.getElementById('bDiff').textContent = sameWins?'PSNR says: worse match':'PSNR says: closer';
+
+const gap=Math.abs(pD-pS).toFixed(1);
+document.getElementById('verdict').innerHTML =
+  `PSNR prefers the <b style="color:var(--bad)">postbox</b> over the same person by `+
+  `<b>${gap} dB</b> &nbsp;&rarr;&nbsp; higher PSNR, zero semantic sense.`;
+</script>
+</body>
+</html>

@@ -1,0 +1,264 @@
+\documentclass[10pt]{article}
+\usepackage[a4paper,margin=1.6cm]{geometry}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{multicol}
+\definecolor{ICLBlue}{RGB}{0,0,205}
+\definecolor{ans}{gray}{0.30}
+\definecolor{tier}{RGB}{170,90,0}
+\titleformat{\section}{\large\bfseries\color{ICLBlue}}{}{0em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+\titlespacing{\section}{0pt}{8pt}{4pt}
+\titlespacing{\subsection}{0pt}{6pt}{2pt}
+\setlist[itemize]{leftmargin=1.2em,itemsep=2pt,topsep=2pt}
+\pagestyle{plain}
+
+% Q / A helpers
+\newcommand{\T}[1]{{\footnotesize\textcolor{tier}{[#1]}}\ }
+\newcommand{\Q}[1]{\smallskip\noindent #1\par}
+\newcommand{\A}[1]{\nopagebreak\noindent\hspace*{1.2em}{\small\itshape\color{ans}$\rightarrow$ #1}\par}
+
+\begin{document}
+
+\begin{center}
+	{\Large\bfseries\textcolor{ICLBlue}{Q\&A Preparation --- NIR-to-RGB Translation}}\\[2pt]
+	{\small Examiner question bank + technical self-test. Cover the grey lines and answer aloud first.}
+\end{center}
+
+%====================================================================
+\section{Part A --- Examiner question bank}
+{\footnotesize Tailored to published research areas; treat as educated bets. Tiers: \textcolor{tier}{[E]}asy, \textcolor{tier}{[M]}edium, \textcolor{tier}{[H]}ard, \textcolor{tier}{[V]}ery hard.}
+
+\subsection{Stefan Vlaski --- optimisation, learning theory, distributed/adaptive ML}
+\Q{\T{E} What exactly is your training objective, and how was the final checkpoint chosen?}
+\A{Weighted L1 + MS-SSIM + light PatchGAN + DINOv2/CLIP/ResNet feature ensemble; checkpoint by best validation CLIP cosine.}
+\Q{\T{M} Batch size 1 --- what does that do to gradient noise/stability, and why acceptable?}
+\A{Memory-bound at $256^2$ with 116M + 3 frozen extractors; zero-init residual scales and a strong L1 anchor stabilise it.}
+\Q{\T{H} Your loss has 6--7 terms. How are weights set, and did you check for conflicting gradients between the feature terms (negative transfer)?}
+\A{Hand-tuned with warm-up; ablations are single runs, so component conclusions are exploratory, not confirmatory --- say so.}
+\Q{\T{H} Why does feature-level KD from the teacher beat matching ground truth alone?}
+\A{It matches the teacher's intermediate representations, preserving the feature behaviour the downstream models read, not just pixels.}
+\Q{\T{V} Matching $F(T(x))\approx F(\text{RGB})$ is necessary, not sufficient, for task recovery. Argue the link.}
+\A{Covariate-shift view: downstream head is fixed; matched input features $\Rightarrow$ matched outputs --- but features are pooled/partial, hence ``agreement, not accuracy.''}
+\Q{\T{V} Could this be made online/adaptive on-device, and what would break?}
+\A{Possible in principle; determinism (F3), calibration drift and stability of feature targets would all be at risk.}
+
+\subsection{Cong Ling --- information theory, coding/lattices, ML theory}
+\Q{\T{E} One-sentence contribution; why is NIR$\to$RGB intrinsically hard?}
+\A{Behaviour-centred translator; hard because colour is absent (one-to-many) and must be inferred from material/texture/context.}
+\Q{\T{M} How much colour is genuinely recoverable from NIR, and where does it come from?}
+\A{Only what data priors allow --- material/texture/scene context; not from the band itself.}
+\Q{\T{H} A deterministic L1/feature model tends to the conditional mean $E[\text{RGB}\mid\text{NIR}]$, which should blur. Why isn't it blurred?}
+\A{MS-SSIM + GAN + feature terms pull off the pixel-mean; selection on CLIP not PSNR; you deliberately trade PSNR for feature agreement.}
+\Q{\T{H} INT8 PTQ is scalar uniform quantisation. Would non-uniform/vector/lattice quantisation help at the same bitrate? Why uniform?}
+\A{Likely yes in theory, but edge kernels (XNNPACK/Hailo) only support uniform-INT8 --- a hardware constraint, not a theoretical preference.}
+\Q{\T{V} Is there an information-theoretic ceiling on gap closure given the MI between NIR and RGB? How would you estimate it?}
+\A{Conceptually yes; could bound via mutual information / rate-distortion, but estimating MI on this data is itself hard --- be honest it's untested.}
+
+\subsection{Bruno Clerckx --- wireless comms, signal processing, real systems}
+\Q{\T{E} Sensor setup, resolution, frame rate?}
+\A{Two Pi Camera Module 3 sensors via beam-splitter, one behind an 850\,nm filter; $256\times256$ stored; capture every 5\,s.}
+\Q{\T{M} You report model-inference latency --- what about end-to-end capture$\to$output?}
+\A{Not separately timed; a known, stated limitation. Full pipeline delay untested.}
+\Q{\T{H} The beam-splitter halves incoming light, but NIR's value is low light. SNR implications? Does it work at night?}
+\A{Concede: dataset is daytime passive NIR; low-light/active-illumination not characterised --- the operating envelope (blur/noise) bounds this.}
+\Q{\T{H} The three NIR channels are highly correlated (single band). Isn't 3-channel input wasteful?}
+\A{Yes --- a 1-channel input could shrink the intro conv; kept 3-ch for drop-in compatibility with RGB-shaped pipelines.}
+\Q{\T{V} Real night deployment uses active NIR illumination, whose statistics differ from your daytime data. Does the translator survive that domain gap?}
+\A{Untested; likely needs domain-matched data. This is the deepest systems critique --- answer honestly, link to the robustness envelope.}
+
+\subsection{Cross-cutting (any examiner)}
+\Q{\T{M} Pseudo-labels --- isn't evaluating against the model's own RGB output circular?}
+\A{Independent probes (DINOv2-L, SigLIP2) held out of training still close $>0.5$.}
+\Q{\T{M} Why is detection closure so much weaker than segmentation?}
+\A{Detection leans on small objects + fine texture, reproduced least faithfully; seg/depth lean on large-scale structure.}
+
+%====================================================================
+\section{Part B --- Technical self-test (do you understand the building blocks?)}
+
+\begin{multicols}{1}
+
+\subsection{NAFNet / architecture}
+\Q{\T{E} What is SimpleGate?}
+\A{Split channels in half, multiply the two halves elementwise.}
+\Q{\T{M} ``Activation-free'' --- so is it linear? Where's the nonlinearity?}
+\A{Not linear: the SimpleGate multiply (product of two linear maps) and channel attention are nonlinear. ``Activation-free'' = no fixed pointwise ReLU/GELU.}
+\Q{\T{H} Why does that help INT8 specifically?}
+\A{No saturating activations $\Rightarrow$ predictable ranges, nothing to clip-calibrate; plus a small, standard op set.}
+\Q{\T{H} Why disable NAFNet's global input$\to$output residual?}
+\A{It would force colour to be a delta on NIR; wrong inductive bias across modalities.}
+
+\subsection{Knowledge distillation}
+\Q{\T{M} Why can a 1.7M student mimic a 116M teacher?}
+\A{It learns an already-solved, smoother target (teacher output) rather than the task from scratch --- ``dark knowledge''.}
+\Q{\T{H} Feature-KD vs output-KD?}
+\A{Output-KD matches pixels; feature-KD matches intermediate frozen-feature activations between student and teacher.}
+
+\subsection{Quantisation}
+\Q{\T{E} What does INT8 store?}
+\A{$\text{real}\approx \text{scale}\cdot(q-\text{zero\_point})$; 256 levels.}
+\Q{\T{M} PTQ vs QAT?}
+\A{PTQ quantises after training via calibration ranges (no retraining); QAT simulates rounding during training so weights adapt --- usually more accurate.}
+\Q{\T{M} What does calibration do?}
+\A{Runs representative data through FP32, collects activation MinMax to set per-tensor scales; weights per-channel.}
+\Q{\T{H} Why is INT8 faster than FP32 on CPU, not just smaller?}
+\A{Higher integer SIMD throughput, lower memory bandwidth/cache pressure, narrower kernel set.}
+\Q{\T{H} Why ``mixed'' INT8 not full INT8?}
+\A{PixelShuffle$=$DepthToSpace has no INT8 kernel at opset 17 (and LiteRT LayerNorm reductions); those stay FP32, feeding convs excluded so they aren't stranded between quant/dequant.}
+
+\subsection{Losses}
+\Q{\T{E} Why L1 not L2 for the pixel term?}
+\A{L1 blurs less; L2 averages plausible colours.}
+\Q{\T{M} MS-SSIM and why include it?}
+\A{Multi-scale structural similarity (luminance/contrast/structure across scales); structural fidelity beyond per-pixel error.}
+\Q{\T{M} PatchGAN + LSGAN --- what does each give?}
+\A{PatchGAN judges $70\times70$ patches $\Rightarrow$ local texture realism; LSGAN uses least-squares $\Rightarrow$ stabler gradients.}
+\Q{\T{H} What is a perceptual loss, and why drop the standard VGG one?}
+\A{L2 in a pretrained net's feature space; replaced single VGG space with a DINOv2/CLIP/ResNet ensemble because the output is consumed by those spaces.}
+
+\subsection{Alignment / geometry}
+\Q{\T{M} When is a single homography valid for a whole scene?}
+\A{Pure rotation about a common centre, planar scene, or no parallax. Beam-splitter gives a shared optical centre $\Rightarrow$ valid at all depths.}
+\Q{\T{H} Why does a side-by-side rig break that?}
+\A{Baseline $\Rightarrow$ depth-dependent parallax (disparity $\propto 1/\text{depth}$); no single 2D warp can undo it.}
+\Q{\T{M} SIFT, Lowe ratio, RANSAC --- one line each?}
+\A{SIFT: scale/rotation-invariant keypoints+descriptors. Lowe: keep match if nearest/second $<0.75$. RANSAC: fit homography from random 4-point sets, keep most-inlier model.}
+
+\subsection{Metrics}
+\Q{\T{M} mAP@0.5 vs mAP@0.5:0.95?}
+\A{AP = area under precision--recall per class, averaged. @0.5 = one IoU threshold; @0.5:0.95 = averaged over thresholds.}
+\Q{\T{M} Dice vs IoU?}
+\A{Dice $=2|A\cap B|/(|A|+|B|)$ (= F1); IoU $=|A\cap B|/|A\cup B|$; monotonically related.}
+\Q{\T{H} What does CLIP-FID capture that per-image cosine doesn't?}
+\A{A distribution-level distance (Fr\'echet distance between feature-set Gaussians) --- whether the set of outputs matches, not just per-image.}
+
+\subsection{Gap-closure metric}
+\Q{\T{M} Write it; explain the denominator.}
+\A{$(m_{\text{trans}}-m_{\text{NIR}})/(m_{\text{RGB}}-m_{\text{NIR}})$; denominator is total NIR$\to$RGB headroom, normalising improvement against the max recoverable.}
+\Q{\T{H} For embeddings, what is $m_{\text{RGB}}$, and for depth (lower=better) how is the sign handled?}
+\A{$m_{\text{RGB}}=1$ (RGB self-cosine); for lower-is-better the harness inverts the difference so positive still means more RGB-like.}
+
+\subsection{Export stack}
+\Q{\T{H} Why three operator fixes for Hailo?}
+\A{Restore explicit conv kernel shapes; rewrite SimpleGate as two $1\times1$ identity-selector convs into the multiply; decompose global-average-pool into a two-stage reduction. All numerically exact.}
+
+\end{multicols}
+
+%====================================================================
+\section{Part C --- General / panel question bank}
+{\footnotesize Broad-viva questions any non-specialist marker might ask: framing, process, judgement, impact.}
+
+\subsection{Framing \& motivation}
+\Q{\T{E} In one sentence, what problem does this solve and for whom?}
+\A{An engineer with a working RGB perception stack who needs to run it on NIR without retraining.}
+\Q{\T{E} Why not just collect NIR data and retrain?}
+\A{Retraining needs open weights + labelled NIR per task; one translator reuses every frozen model unchanged.}
+\Q{\T{M} The single most important result?}
+\A{Pixel fidelity doesn't predict downstream usefulness --- Pix2Pix ties on PSNR/SSIM yet recovers nothing downstream.}
+\Q{\T{M} Who would deploy this, and what do they still need that you haven't provided?}
+\A{Night/biometric/inspection NIR users; they'd need person-class validation, active-illumination data, and end-to-end timing.}
+
+\subsection{Process \& judgement}
+\Q{\T{M} Hardest part technically?}
+\A{A clean parallax-free paired dataset, and a quantise/export path that survives onto the Pi.}
+\Q{\T{M} What did you try that didn't work?}
+\A{NIR-gradient-weighted L1 barely helped; onnx2tf broke LayerNorm layout (moved to litert-torch).}
+\Q{\T{H} What would you change if restarting?}
+\A{QAT instead of PTQ; collect person/low-light data under ethics; budget end-to-end timing from the start.}
+\Q{\T{H} Effort that wasn't worth it in hindsight?}
+\A{The pixel-side loss experiments --- the win was entirely on the feature side.}
+
+\subsection{Results interpretation (watch for over-claiming)}
+\Q{\T{M} Does gap closure 0.59 mean the model is ``59\% accurate''?}
+\A{No --- it's 59\% of the recoverable behavioural agreement with the RGB model, not task accuracy.}
+\Q{\T{H} Detection is +0.08, segmentation +0.59. Is detection really a success?}
+\A{Positive but weak --- honestly the weakest result; small-object/fine-texture reason.}
+\Q{\T{H} Could any gains be an evaluation artefact rather than real improvement?}
+\A{Possibly: pseudo-labels + partly non-independent probes; mitigated by held-out DINOv2-L/SigLIP2, stated as a limitation.}
+
+\subsection{Impact, ethics, legality}
+\Q{\T{E} Privacy measures in the dataset?}
+\A{Rig tilted up, $256\times256$ low-res, dataset unpublished --- no identifiable imagery retained.}
+\Q{\T{M} This enables better NIR surveillance --- dual-use concern?}
+\A{Acknowledge it; note privacy-by-design choices and that person-tracking is out of scope/untested.}
+\Q{\T{M} Licensing constraints?}
+\A{YOLOv8 is AGPL --- used only as an offline eval probe, not deployed; the student is original work.}
+
+\subsection{Positioning \& scalability}
+\Q{\T{M} How is this different from the closest prior work (Pix2Next)?}
+\A{Reverse direction (NIR$\to$RGB), ensemble used purely as a training signal on an unmodified backbone, behaviour-centred evaluation across a task panel.}
+\Q{\T{H} Does it scale to higher resolution / video?}
+\A{Untested above $256^2$; video needs temporal consistency (flagged as further work --- flicker risk).}
+\Q{\T{H} Cheapest way to reproduce/extend?}
+\A{Rig is a Pi + two commodity cameras + a beam-splitter; reusable for other cross-spectral pairings.}
+
+\subsection{Viva classics --- have crisp answers ready}
+\Q{\T{E} Your contribution versus off-the-shelf components?}
+\A{The combination + evaluation standard: restoration backbone for cross-spectral synthesis, foundation-ensemble supervision, the aligned-capture rig, behaviour-centred gap-closure.}
+\Q{\T{H} Drop one component --- which, and what's lost?}
+\A{Drop the GAN term (smallest effect, mainly minor detection help); keep the feature ensemble (No-FM ablation shows it's essential).}
+\Q{\T{V} Is any of this novel, or just integration?}
+\A{Parts are published; novelty is (a) NAFNet for NIR$\to$RGB (not previously reported), (b) foundation-ensemble as the training signal, (c) behaviour-centred annotation-free evaluation across a task panel.}
+\Q{\T{V} Weakest claim in the thesis --- defend or retract?}
+\A{Name one (e.g. detection usefulness, or generality beyond daytime urban) and defend it as bounded, not universal.}
+
+%====================================================================
+\section{Part D --- Deep technical probes}
+{\footnotesize Second-order questions that separate ``I used it'' from ``I understand it.'' Mostly \textcolor{tier}{[H]}/\textcolor{tier}{[V]}.}
+
+\begin{multicols}{1}
+
+\subsection{Quantisation, deeper}
+\Q{\T{H} Symmetric vs asymmetric --- which for weights, which for activations, and why?}
+\A{Weights: symmetric, per-channel (zero-point 0, centred). Activations: asymmetric (zero-point $\neq0$) to fit shifted/non-negative ranges; Hailo I/O is UINT8.}
+\Q{\T{V} Why does depth degrade most under INT8 (largest relative loss)?}
+\A{Depth depends on subtle gradients/relative ordering; quantisation injects high-frequency error that perturbs the ordering, and per-image min--max-normalised L1 amplifies small absolute changes.}
+\Q{\T{H} You calibrate on 100 training frames --- what bias does that risk?}
+\A{If calibration $\neq$ deployment distribution, activation ranges are mis-set $\Rightarrow$ clipping/saturation. Representative but daytime-only --- a stated limitation.}
+\Q{\T{H} Why must LayerNorm stay FP32 under quantisation?}
+\A{Its mean/variance reductions need precision; integer variance is unstable and there's no good INT8 kernel --- so it's left in FP32.}
+\Q{\T{V} How do you actually guarantee bit-identical 8-bit outputs (determinism, F3)?}
+\A{INT8 integer kernels are exact/deterministic; fixed runtime + thread config; verified zero mismatched pixels on repeated runs. FP32 may vary across hardware --- tested on the fixed runtime.}
+
+\subsection{Feature-matching mechanics}
+\Q{\T{H} Do you match spatial feature maps or pooled embeddings, and at which depth?}
+\A{Training matches intermediate feature-map activations (early/mid) per backbone --- spatial, so localisation is preserved; pooled cosine is only for evaluation.}
+\Q{\T{M} Why compute feature losses at $224\times224$ when training at $256^2$?}
+\A{The frozen backbones expect $\sim224$ input; resize to their native resolution before extracting.}
+\Q{\T{H} Gradients and frozen networks --- if the extractors are frozen, how do they train the generator?}
+\A{Frozen = no weight update, but gradients still flow through them to the generator; they must stay differentiable and FP32 for stable backprop.}
+\Q{\T{V} Why an ensemble rather than one strong backbone --- and what's the failure mode?}
+\A{Different backbones encode different statistics (self-sup, vision--language, supervised CNN); risk is one term dominating or conflicting gradients --- managed by weighting (DINOv2 40 vs ResNet 5) and warm-up.}
+
+\subsection{Adversarial \& architecture}
+\Q{\T{H} Why does LSGAN reduce vanishing gradients vs a vanilla (BCE) GAN?}
+\A{Sigmoid+BCE saturates for confident samples; least-squares penalises by distance from the boundary, so gradients persist (it minimises a Pearson $\chi^2$ divergence).}
+\Q{\T{H} A $70\times70$ PatchGAN --- what can it not enforce, and why does that matter here?}
+\A{It judges local patches, so it can't enforce global colour consistency --- a known pix2pix weakness; NAFNet's deep bottleneck (large receptive field) compensates.}
+\Q{\T{H} Why is BatchNorm-free (LayerNorm) important at batch size 1?}
+\A{BatchNorm statistics are unreliable for tiny batches; LayerNorm is per-sample, so training is stable --- pix2pix's BatchNorm-heavy U-Net is a liability here.}
+
+\subsection{Alignment, deeper}
+\Q{\T{V} SIFT across the NIR/RGB gap: foliage inverts in brightness --- why does matching still work?}
+\A{SIFT uses gradient-orientation histograms, robust to monotonic intensity change but \emph{not} contrast inversion; matches concentrate on structural edges (buildings), which is why vegetation yields fewer inliers.}
+\Q{\T{H} When can RANSAC return a bad homography even with many inliers?}
+\A{Near-degenerate point configs (dominant single plane, low texture, collinear points); mitigated by an inlier-count threshold and discarding degenerate fits.}
+\Q{\T{H} What exactly does DepthToSpace/PixelShuffle do, and why no INT8 kernel?}
+\A{Rearranges $(C\,r^2,H,W)\to(C,H r,W r)$ (sub-pixel upsample); just a reshuffle, but the runtime lacked an INT8 implementation at opset 17, so it (and feeding convs) stays FP32.}
+
+\subsection{Metrics \& evaluation, deeper}
+\Q{\T{V} Using the model's own RGB detections as ``ground truth'' --- what bias does that bake in?}
+\A{It measures agreement with the RGB model's behaviour \emph{including its mistakes}, not correctness; native-RGB self-agreement is 1 by construction.}
+\Q{\T{H} The Dice 5\% pixel threshold --- what bias does it introduce?}
+\A{Excludes tiny/absent classes to avoid noisy Dice, but only evaluates where a class is prominent --- a selection bias that inflates scores.}
+\Q{\T{H} Gap closure: ratio of aggregate means, or mean of per-image ratios? Why does it matter?}
+\A{Computed on aggregate metrics (e.g. class-mean Dice); ratio-of-means $\neq$ mean-of-ratios, and per-image denominators can be near-zero --- the harness handles the zero-denominator case explicitly.}
+
+\end{multicols}
+
+\vspace{4pt}\noindent\rule{\textwidth}{0.4pt}\\[2pt]
+{\footnotesize \textbf{Drill these three first --- most likely to expose a shaky answer:} where the nonlinearity is if it's ``activation-free''; why INT8 is faster (not just smaller); when a single homography is valid. \quad If you don't know: say so, then reason aloud --- honesty is marked.}
+
+\end{document}

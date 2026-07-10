@@ -1,0 +1,87 @@
+project:
+  name: rgb_to_nir
+  experiment: rgb_to_nir_v1
+  output_dir: experiments
+data:
+  # Swap: feed RGB as the "nir" tensor, NIR as the "rgb" target.
+  # The generator becomes RGB -> NIR.
+  swap_nir_rgb: true
+  nir_dir: data/nir
+  rgb_dir: data/rgb
+  mp_cache: null
+  extensions:
+  - .png
+  - .jpg
+  - .jpeg
+  - .tif
+  - .tiff
+  image_size: 256
+  in_channels: 3
+  out_channels: 3
+split:
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  seed: 42
+  scene_regex: null
+augment:
+  hflip: true
+  rotate_max_deg: 5.0
+  scale_min: 0.95
+  scale_max: 1.05
+  # NIR-channel augmentations OFF — the "nir" tensor here is actually RGB; we
+  # want a clean deterministic mapping, not brightness/gamma noise on the input.
+  nir_brightness: 0.0
+  nir_gamma_min: 1.0
+  nir_gamma_max: 1.0
+model:
+  generator:
+    type: nafnet
+    width: 32              # half the forward model — RGB->NIR is much easier
+    enc_blk_nums: [2, 2, 2, 4]
+    middle_blk_num: 6
+    dec_blk_nums: [2, 2, 2, 2]
+    dropout: 0.0
+    global_residual: false
+    output_tanh: true
+  discriminator:
+    type: patchgan
+    base_channels: 32
+    n_layers: 3
+loss:
+  # Deterministic regression — heavy L1, light perceptual, no GAN/MS-SSIM/feature-map.
+  l1_weight: 100.0
+  perceptual_weight: 5.0
+  gan_weight: 0.0
+  msssim_weight: 0.0
+  region_l1_boost: 1.0
+  perceptual_layers: [3, 8, 15, 22]
+  gan_type: lsgan
+optim:
+  generator:
+    lr: 1.0e-04
+    betas: [0.9, 0.99]
+  discriminator:
+    lr: 1.0e-04
+    betas: [0.5, 0.999]
+train:
+  batch_size: 4
+  num_workers: 4
+  epochs: 30
+  amp: false              # no AMP after the KAIST collapse
+  log_interval: 50
+  val_interval_epochs: 1
+  save_interval_epochs: 5
+  keep_last_checkpoints: 2
+  sample_count: 8
+  grad_clip: 1.0
+  resume: null
+  resume_mode: weights_only
+  best_metric: val/psnr     # PSNR is the right thing here — we want a smooth, faithful reverse mapping
+  best_metric_mode: max
+eval:
+  metrics:
+  - psnr
+  - ssim
+  lpips_net: alex
+device: cuda

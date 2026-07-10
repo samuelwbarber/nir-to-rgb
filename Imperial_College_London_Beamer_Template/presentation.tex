@@ -1,0 +1,849 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% MEng Final Project Presentation
+% Edge-Deployable NIR-to-RGB Translation
+% Samuel Barber
+%
+%!TEX program = xelatex
+% Compile with XeLaTeX (custom Imperial fonts).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[
+	aspectratio=169,
+	t,
+	onlytextwidth,
+	10pt,
+]{beamer}
+
+\usetheme{Imperial}
+
+% The theme's fallback font branch (used when the Imperial fonts are not
+% installed system-wide) drops TeX ligatures, so "---" renders as three
+% hyphens. Re-load the sans font from the Fonts/ folder with ligatures on.
+\IfFontExistsTF{Imperial Sans Text}{}{%
+	\setsansfont{ImperialSansText}[%
+		Path=Fonts/,
+		UprightFont=*-Regular.ttf,
+		ItalicFont=*-Regular.ttf,
+		BoldFont=*-Bold.ttf,
+		Ligatures=TeX,
+	]%
+}
+
+% Pull in the project's report figures alongside the template images.
+\graphicspath{%
+	{Images/}%
+	{./}%
+	{../imgs/}%
+	{../imgs/pipeline_report/}%
+	{../imgs/ablations/}%
+	{../imgs/pix2pix-poor-semantic-result/}%
+}
+
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+
+% Highlight callout boxes
+\setbeamercolor{keymsg}{fg=white,bg=ICLBlue}
+\setbeamercolor{eqbox}{fg=ICLBlue,bg=ICLBlue!10}
+
+% Closure colours for the results tables
+\definecolor{GoodGreen}{RGB}{0,140,70}
+\definecolor{BadRed}{RGB}{200,30,30}
+\newcommand{\up}[1]{\textcolor{GoodGreen}{#1}}
+\newcommand{\dn}[1]{\textcolor{BadRed}{#1}}
+
+% Boxed stage card (image + text) for the alignment-pipeline slide
+\newcommand{\stagebox}[2]{%
+	\nointerlineskip%
+	\fcolorbox{ICLBlue!45}{ICLBlue!6}{%
+		\begin{minipage}[c][1.62cm][c]{0.94\textwidth}%
+			\begin{minipage}[c]{5.4cm}\centering\includegraphics[width=5.3cm, height=1.45cm, keepaspectratio]{#1}\end{minipage}%
+			\hspace{0.25cm}%
+			\begin{minipage}[c]{0.44\linewidth}\raggedright #2\end{minipage}%
+		\end{minipage}}\par}
+
+%----------------------------------------------------------------------------------------
+%	PRESENTATION INFORMATION
+%----------------------------------------------------------------------------------------
+
+\title{Edge-Deployable NIR-to-RGB Translation}
+\subtitle{A Pre-Processor for Pre-Trained Vision Models}
+\author{Samuel Barber \quad\textbar\quad Supervisor: Prof.\ Cong Ling}
+\date{25 June 2026}
+
+\begin{document}
+
+%----------------------------------------------------------------------------------------
+%	TITLE SLIDE
+%----------------------------------------------------------------------------------------
+
+\begingroup
+	\setbeamercolor{background canvas}{bg=ICLBlue}
+	\setbeamercolor{title page title}{fg=white}
+	\setbeamercolor{title page subtitle}{fg=white}
+	\setbeamercolor{author}{fg=white}
+	\setbeamercolor{date}{fg=white}
+	\setbeamertemplate{title page}[logo]{ICL_Logo_White.pdf}
+	\frame[plain, s]{\titlepage}
+\endgroup
+
+%----------------------------------------------------------------------------------------
+%	1b. WHY NIR
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{Why near-infrared?}
+	\framesubtitle{NIR sees what visible light misses, and that is what RGB models get wrong}
+
+	\centering
+	\begin{columns}[T]
+		\begin{column}{0.5\linewidth}
+			\centering
+			\includegraphics[width=\linewidth, height=0.36\textheight, keepaspectratio]{nir-hand.jpg}\\[2pt]
+			{\tiny\textcolor{ICLBlue}{Skin (RGB left, NIR right): NIR penetrates, exposing subsurface veins.}}
+		\end{column}
+		\begin{column}{0.5\linewidth}
+			\centering
+			\includegraphics[width=\linewidth, height=0.36\textheight, keepaspectratio]{tree-nir.png}\\[2pt]
+			{\tiny\textcolor{ICLBlue}{Trees (RGB left, NIR right): foliage glows in NIR because chlorophyll reflects it.}}
+		\end{column}
+	\end{columns}
+
+	\vspace{0.5\baselineskip}
+	\begin{columns}[T]
+		\begin{column}{0.48\linewidth}
+			\small
+			\begin{itemize}
+				\item Penetrates skin, vegetation reflects, water absorbs (biometrics, agriculture, remote sensing).
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.48\linewidth}
+			\small
+			\begin{itemize}
+				\item Sees in darkness and fog (night vision). \textbf{But} it has no colour and materials look different, so RGB models misread it.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	2. THE PROBLEM
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{The problem: RGB models break on NIR}
+	\framesubtitle{No colour, different materials: detectors and segmentation collapse}
+
+	\centering
+	\vspace{0.6\baselineskip}
+	\begin{columns}[b]
+		\begin{column}{0.33\linewidth}
+			\centering
+			\includegraphics[height=0.52\textheight, keepaspectratio]{poor.png}\\[2pt]
+			{\tiny\textcolor{ICLBlue}{Detection: YOLOv8}}
+		\end{column}
+		\begin{column}{0.33\linewidth}
+			\centering
+			\includegraphics[height=0.27\textheight, keepaspectratio]{nir-hand2_mediapipe_overlay.png}\\[3pt]
+			\includegraphics[height=0.27\textheight, keepaspectratio]{nir-hand1_mediapipe_overlay.png}\\[2pt]
+			{\tiny\textcolor{ICLBlue}{Segmentation: MediaPipe (top RGB, bottom NIR)}}
+		\end{column}
+		\begin{column}{0.33\linewidth}
+			\centering
+			\includegraphics[height=0.52\textheight, keepaspectratio]{beit-fail.jpg}\\[2pt]
+			{\tiny\textcolor{ICLBlue}{Segmentation: BEiT}}
+		\end{column}
+	\end{columns}
+
+	\vspace{0.4\baselineskip}
+	{\small In each: \textbf{RGB} (works) vs.\ the matched \textbf{NIR} (fails). Retraining every model on labelled NIR is impractical.}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	3. THE IDEA + THESIS
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{The idea}
+	\framesubtitle{Insert a learned translator and leave the downstream model untouched}
+
+	\centering
+	\begin{tikzpicture}[
+		font=\small,
+		box/.style={rectangle, rounded corners, draw=ICLBlue, very thick, fill=ICLBlue!8,
+			minimum width=2.7cm, minimum height=1.2cm, align=center},
+		frozen/.style={rectangle, rounded corners, draw=ICLBlue, very thick, fill=ICLBlue!20,
+			minimum width=2.7cm, minimum height=1.2cm, align=center},
+		ar/.style={-{Latex[length=3mm]}, very thick, ICLBlue}
+	]
+		\node[box]    (sensor) {NIR\\sensor};
+		\node[box, right=1.2cm of sensor] (trans) {\textbf{Translator}\\(this project)};
+		\node[frozen, right=1.2cm of trans] (model) {Frozen RGB\\model};
+		\node[align=center, right=1.1cm of model] (out) {detections,\\masks, depth};
+		\draw[ar] (sensor) -- (trans);
+		\draw[ar] (trans) -- node[midway, above]{\footnotesize RGB-like} (model);
+		\draw[ar] (model) -- (out);
+	\end{tikzpicture}
+
+	\vspace{1.0\baselineskip}
+	\begin{beamercolorbox}[wd=0.92\linewidth, sep=10pt, rounded=true]{keymsg}
+		\centering\textbf{Key message:} judge a translation by how much
+		\textbf{frozen-model behaviour} it recovers, not by how good the image looks.
+	\end{beamercolorbox}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	5. WHY IT'S HARD / GAP IN PRIOR WORK
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{Why it is hard, and the two design choices that follow}
+
+	\begin{columns}[T]
+		\begin{column}{0.5\linewidth}
+			\textbf{The task}
+			\begin{itemize}
+				\item No colour in NIR, so it is \textbf{one-to-many}: many RGBs fit one frame.
+				\item Materials look different (foliage bright, water dark).
+				\item Aligned pairs are scarce (camera parallax).
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.5\linewidth}
+			\textbf{Prior work}
+			\begin{itemize}
+				\item GANs and diffusion, judged mainly on \textbf{image quality}.
+				\item Diffusion is iterative and stochastic, wrong for a deterministic edge pre-processor.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+
+	\vspace{0.6\baselineskip}
+	\begin{beamercolorbox}[wd=0.96\linewidth, sep=9pt, rounded=true]{keymsg}
+		\centering\textbf{Two design choices:} \;(1)~a deterministic, edge-friendly \textbf{restoration backbone};\quad (2)~supervise in \textbf{feature space}, not pixels.
+	\end{beamercolorbox}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	6. DATA: THE RIG
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{Data: a shared-aperture capture rig}
+	\framesubtitle{12,536 simultaneous, homography-aligned NIR/RGB pairs across London}
+
+	\begin{columns}[T]
+		\begin{column}{0.46\linewidth}
+			\centering
+			\includegraphics[width=\linewidth, height=0.66\textheight, keepaspectratio]{device-labeled.png}\\[2pt]
+			{\tiny\textcolor{ICLBlue}{Raspberry~Pi~5 with two Camera Module~3 sensors, one behind an 850\,nm long-pass filter.}}
+		\end{column}
+		\begin{column}{0.54\linewidth}
+			\begin{itemize}
+				\item A \textbf{beam-splitter cube} gives both cameras one optical centre, so a single homography aligns the whole frame.
+				\item 20+ hours cycling London, filtered and aligned to \textbf{12{,}536} pairs at $256{\times}256$.
+				\item No public NIR/RGB set is captured and aligned simultaneously at this scale.
+			\end{itemize}
+			\vspace{0.2\baselineskip}
+			\centering
+			\includegraphics[width=\linewidth, height=0.28\textheight, keepaspectratio]{pipeline_05_output.pdf}\\[1pt]
+			{\tiny\textcolor{ICLBlue}{An aligned pair (half RGB / half NIR).}}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	6b. PRODUCING ALIGNED PAIRS
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{Producing aligned pairs}
+	\framesubtitle{Shared aperture means one depth-independent homography per pair}
+
+	\centering
+	\scriptsize
+	\setlength{\fboxsep}{0.8pt}
+	\setlength{\parskip}{0pt}
+	\vspace{0.3\baselineskip}
+
+	\stagebox{pipeline_01_pair.pdf}{\textbf{1. Raw pair:} full-frame RGB/NIR straight from the two sensors.}
+	\stagebox{pipeline_02_sharpness.pdf}{\textbf{2. Sharpness filter:} reject motion-blurred frames (Laplacian variance $<100$).}
+	\stagebox{pipeline_03_crop.pdf}{\textbf{3. Centre-crop:} common square field of view for the feature detector.}
+	\stagebox{pipeline_04_sift.pdf}{\textbf{4. Align + export:} SIFT + RANSAC homography, then warp and resize to $256{\times}256$.}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	7. CORE METHOD: FOUNDATION-FEATURE SUPERVISION
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{The backbone: an activation-free NAFNet}
+	\framesubtitle{No activation function, so it quantises and exports cleanly}
+
+	\vspace{0.8\baselineskip}
+	\begin{columns}[T]
+		\begin{column}{0.46\linewidth}
+			\centering
+			\vspace{0.3\baselineskip}
+			\begin{tikzpicture}[
+				font=\scriptsize,
+				op/.style={rectangle, rounded corners, draw=ICLBlue, fill=ICLBlue!8, minimum width=2.4cm, minimum height=0.52cm, align=center},
+				act/.style={rectangle, rounded corners, draw=BadRed, fill=BadRed!12, minimum width=2.4cm, minimum height=0.52cm, align=center},
+				gate/.style={rectangle, rounded corners, draw=GoodGreen, fill=GoodGreen!16, minimum width=2.4cm, minimum height=0.52cm, align=center},
+				ar/.style={-{Latex[length=1.4mm]}, ICLBlue}
+			]
+				\node[font=\scriptsize\bfseries] at (0,0.78) {Pix2Pix block};
+				\node[op]  (a1) at (0,0.2)  {conv};
+				\node[act] (a2) at (0,-0.42){ReLU / GELU};
+				\node[op]  (a3) at (0,-1.04){conv};
+				\draw[ar](a1)--(a2); \draw[ar](a2)--(a3);
+				\node[font=\scriptsize\bfseries] at (3.1,0.78) {NAFNet block};
+				\node[op]   (b1) at (3.1,0.2)  {conv};
+				\node[gate] (b2) at (3.1,-0.42){SimpleGate};
+				\node[op]   (b3) at (3.1,-1.04){conv};
+				\draw[ar](b1)--(b2); \draw[ar](b2)--(b3);
+			\end{tikzpicture}
+
+			\vspace{0.4\baselineskip}
+			{\footnotesize \textbf{SimpleGate:} split the channels in half, multiply the two halves. \up{First use of NAFNet for NIR$\to$RGB.}}
+		\end{column}
+		\begin{column}{0.5\linewidth}
+			\textbf{Why drop the activation?}
+			\begin{itemize}
+				\setlength{\itemsep}{4pt}
+				\item Keeps negatives, so no ``dead'' units and steadier training.
+				\item The multiply gates one half with the other, capturing feature interactions.
+				\item Predictable value range, so it \textbf{quantises to INT8 cleanly}.
+				\item Small, standard op set, so \textbf{clean export} to ONNX, LiteRT, Hailo.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	7b. THE LOSS
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{The loss: supervise in feature space}
+	\framesubtitle{Match the features frozen foundation models use, not the pixels}
+
+	\centering
+	\includegraphics[width=0.82\linewidth]{loss_diagram.png}
+
+	\vspace{0.5\baselineskip}
+	\begin{columns}[T]
+		\begin{column}{0.52\linewidth}
+			\begin{beamercolorbox}[wd=\linewidth, sep=8pt, rounded=true]{eqbox}
+				\centering
+				Train so that, for each frozen extractor $F$:
+				\[ F\big(T(x_{\text{NIR}})\big)\;\approx\;F(x_{\text{RGB}}) \]
+			\end{beamercolorbox}
+		\end{column}
+		\begin{column}{0.44\linewidth}
+			{\footnotesize Replaces the single VGG term, on an unmodified backbone. Kept alongside an L1 colour anchor, MS-SSIM and a light PatchGAN.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	8. MAKING IT DEPLOYABLE
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{Making it deployable: distil, then quantise}
+
+	\centering
+	\begin{tikzpicture}[
+		font=\small,
+		box/.style={rectangle, rounded corners, draw=ICLBlue, very thick, fill=ICLBlue!8,
+			minimum width=3.0cm, minimum height=1.3cm, align=center},
+		ar/.style={-{Latex[length=3mm]}, very thick, ICLBlue}
+	]
+		\node[box] (teacher) {\textbf{Teacher}\\NAFNet-64\\116\,M params};
+		\node[box, right=1.5cm of teacher] (student) {\textbf{Student}\\NAFNet-16\\1.7\,M params};
+		\node[box, right=1.5cm of student] (edge) {\textbf{Edge artefact}\\mixed-INT8\\2.3\,MB};
+		\draw[ar] (teacher) -- node[midway, above]{\footnotesize distil} node[midway, below]{\footnotesize $67{\times}$} (student);
+		\draw[ar] (student) -- node[midway, above]{\footnotesize export +} node[midway, below]{\footnotesize quantise} (edge);
+	\end{tikzpicture}
+
+	\vspace{0.8\baselineskip}
+	\begin{itemize}
+		\item Student inherits the teacher's activation-free blocks $\Rightarrow$ same clean operator set.
+		\item Distilled on the teacher's outputs + frozen-feature losses (downstream fidelity, not pixel mimicry).
+		\item Post-training INT8, exported to LiteRT (CPU) and a Hailo-8L HEF (NPU).
+	\end{itemize}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	8b. QUALITATIVE RESULTS
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{Does it actually work?}
+	\framesubtitle{NIR in, RGB out: the eye test is not enough}
+
+	\begin{columns}[T]
+		\begin{column}{0.40\linewidth}
+			\centering
+			\includegraphics[height=0.8\textheight, keepaspectratio]{random_no_people_grid.png}
+		\end{column}
+		\begin{column}{0.58\linewidth}
+			\small
+			\textbf{Rows, top to bottom}
+			\begin{enumerate}
+				\setlength{\itemsep}{1pt}
+				\item Raw NIR (input)
+				\item Pix2Pix baseline
+				\item Teacher (NAFNet-64)
+				\item Student FP32
+				\item Student INT8 (deployed)
+				\item Ground-truth RGB
+			\end{enumerate}
+			\vspace{0.2\baselineskip}
+			\begin{beamercolorbox}[wd=\linewidth, sep=7pt, rounded=true]{keymsg}
+				\footnotesize All produce plausible colour, and Pix2Pix even ties the student on PSNR and SSIM. But it recovers almost \textbf{none} of the downstream behaviour.
+			\end{beamercolorbox}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	9. WHY NOT PSNR
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{Why not just report PSNR?}
+	\framesubtitle{One NIR input has many RGB translations, and PSNR picks the wrong one}
+
+	\centering
+	\begin{columns}[T]
+		\begin{column}{0.235\linewidth}
+			\centering
+			\includegraphics[width=\linewidth,height=0.4\textheight,keepaspectratio]{psnr_nir.png}\\[3pt]
+			\textbf{\footnotesize NIR input}\\
+			{\scriptsize what the translator sees}
+		\end{column}
+		\begin{column}{0.235\linewidth}
+			\centering
+			\includegraphics[width=\linewidth,height=0.4\textheight,keepaspectratio]{psnr_blue.png}\\[3pt]
+			\textbf{\footnotesize Translation A}\\
+			{\scriptsize same person, blue shirt}\\
+			{\scriptsize \dn{PSNR 13.0\,dB}}
+		\end{column}
+		\begin{column}{0.235\linewidth}
+			\centering
+			\includegraphics[width=\linewidth,height=0.4\textheight,keepaspectratio]{psnr_postbox.png}\\[3pt]
+			\textbf{\footnotesize Translation B}\\
+			{\scriptsize a red postbox}\\
+			{\scriptsize \up{PSNR 18.2\,dB}}
+		\end{column}
+		\begin{column}{0.235\linewidth}
+			\centering
+			\includegraphics[width=\linewidth,height=0.4\textheight,keepaspectratio]{psnr_ref.png}\\[3pt]
+			\textbf{\footnotesize True RGB}\\
+			{\scriptsize the target (GT)}
+		\end{column}
+	\end{columns}
+
+	\vspace{0.35\baselineskip}
+	\begin{beamercolorbox}[wd=0.94\linewidth, sep=7pt, rounded=true]{keymsg}
+		\centering\footnotesize Both are valid RGB guesses for one NIR input. Against the true RGB, PSNR scores the \textbf{postbox} higher than the real person, just for keeping the red pixels. It rewards pixels, not meaning.
+	\end{beamercolorbox}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	9. EVALUATION DESIGN: GAP CLOSURE
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{How I measure success: gap closure}
+	\framesubtitle{Run a frozen model on three inputs and ask how much RGB behaviour is recovered}
+
+	\centering
+	\vspace{1.2\baselineskip}
+	\begin{columns}
+		\begin{column}{0.2\linewidth}\end{column}
+		\begin{column}{0.6\linewidth}
+			\begin{beamercolorbox}[wd=\linewidth, sep=10pt, rounded=true]{eqbox}
+				\centering
+				\[
+					\text{gap closure} \;=\; \frac{m(\text{translated}) - m(\text{NIR})}{m(\text{RGB}) - m(\text{NIR})}
+				\]
+			\end{beamercolorbox}
+		\end{column}
+		\begin{column}{0.2\linewidth}\end{column}
+	\end{columns}
+
+	\vspace{1.0\baselineskip}
+	\begin{columns}[T]
+		\begin{column}{0.32\linewidth}
+			\centering\textbf{\dn{0}}\\ no better than raw NIR
+		\end{column}
+		\begin{column}{0.32\linewidth}
+			\centering\textbf{\up{1}}\\ native-RGB behaviour fully recovered
+		\end{column}
+		\begin{column}{0.32\linewidth}
+			\centering\textbf{\dn{$<0$}}\\ translation made it \emph{worse}
+		\end{column}
+	\end{columns}
+
+	\vspace{0.7\baselineskip}
+	{\small Reference = the \emph{same} frozen model on native RGB (pseudo-labels), across detection, segmentation, depth and independent embedding probes. No human annotation required.}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	10. HEADLINE RESULT
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{Headline result}
+	\framesubtitle{Same pixel metrics, opposite downstream story}
+
+	\centering
+	\scriptsize
+
+	\begin{tabular}{L{0.30\linewidth} C{0.16\linewidth} C{0.16\linewidth} C{0.16\linewidth}}
+		\toprule
+		\textbf{Pixel fidelity} & \textbf{PSNR\,$\uparrow$} & \textbf{SSIM\,$\uparrow$} & \textbf{LPIPS\,$\downarrow$}\\
+		\midrule
+		Pix2Pix       & 24.03 & 0.752 & 0.185\\
+		Student FP32  & 24.09 & 0.781 & 0.146\\
+		Student INT8  & 23.57 & 0.770 & 0.153\\
+		\bottomrule
+	\end{tabular}
+
+	\smallskip
+	{\footnotesize\textbf{Comparable on pixels.} Now the downstream gap closure:}
+	\smallskip
+
+	\begin{tabular}{L{0.30\linewidth} C{0.16\linewidth} C{0.16\linewidth} C{0.16\linewidth}}
+		\toprule
+		\textbf{Task (gap closure)} & \textbf{Pix2Pix} & \textbf{Student FP32} & \textbf{Student INT8}\\
+		\midrule
+		Detection (YOLOv8m)     & \dn{$-0.15$} & \up{$+0.08$} & \up{$+0.08$}\\
+		Detection (RT-DETR-L)   & \dn{$-0.13$} & \up{$+0.07$} & \up{$+0.05$}\\
+		Segmentation (ADE20K)   & \up{$+0.18$} & \up{$+0.59$} & \up{$+0.57$}\\
+		Segmentation (Cityscapes) & \up{$+0.23$} & \up{$+0.35$} & \up{$+0.31$}\\
+		Depth (DepthAnything)   & \dn{$-0.00$} & \up{$+0.37$} & \up{$+0.33$}\\
+		\midrule
+		\emph{(indep.) DINOv2-L}   & \dn{$-0.02$} & \up{$+0.57$} & \up{$+0.53$}\\
+		\emph{(indep.) SigLIP2}    & \up{$+0.10$} & \up{$+0.54$} & \up{$+0.51$}\\
+		\bottomrule
+	\end{tabular}
+
+	\smallskip
+	{\footnotesize Pix2Pix \textbf{matches the student on pixel metrics} but goes \emph{negative} on both detectors and recovers almost nothing downstream. Both student precisions stay positive on all five primary tasks.}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	12b. ABLATION: WHY THE FEATURE ENSEMBLE
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{What drives it: the feature ensemble}
+	\framesubtitle{Remove it: best pixel scores, yet it trails on every downstream metric}
+
+	\centering
+	\scriptsize
+	\setlength{\tabcolsep}{4pt}
+	\resizebox{\linewidth}{!}{%
+	\begin{tabular}{l cc cccc}
+		\toprule
+		& \multicolumn{2}{c}{\textbf{pixel}} & \multicolumn{4}{c}{\textbf{downstream}}\\
+		\cmidrule(lr){2-3}\cmidrule(lr){4-7}
+		\textbf{Teacher config} & \textbf{PSNR\,$\uparrow$} & \textbf{LPIPS\,$\downarrow$} & \textbf{DINOv2-L\,$\uparrow$} & \textbf{YOLO clo.\,$\uparrow$} & \textbf{ADE clo.\,$\uparrow$} & \textbf{Depth\,$\downarrow$}\\
+		\midrule
+		Pix2Pix baseline    & 24.03 & 0.185 & 0.723 & $-0.152$ & 0.183 & 0.678\\
+		No feature-match    & \up{27.10} & \up{0.098} & 0.886 & $+0.011$ & 0.619 & 0.420\\
+		Final teacher       & 26.16 & 0.103 & \up{0.921} & \up{$+0.108$} & \up{0.670} & \up{0.365}\\
+		\bottomrule
+	\end{tabular}}
+
+	\vspace{0.6\baselineskip}
+	\begin{beamercolorbox}[wd=0.94\linewidth, sep=8pt, rounded=true]{keymsg}
+		\centering\footnotesize Without the ensemble the teacher gets the \textbf{best PSNR and LPIPS}, yet the final teacher leads on \textbf{every downstream metric} and detection closure collapses to near zero. The ensemble, not pixel fidelity, recovers downstream behaviour.
+	\end{beamercolorbox}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	11. EDGE + LIVE DEMO
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{It runs on the edge, in real time}
+
+	\begin{columns}[T]
+		\begin{column}{0.46\linewidth}
+			\small
+			\begin{tabular}{L{0.46\linewidth} C{0.22\linewidth} C{0.22\linewidth}}
+				\toprule
+				\textbf{Backend} & \textbf{FPS} & \textbf{Size}\\
+				\midrule
+				Hailo-8L NPU & \up{27.2} & 17.7\,MB\\
+				CPU LiteRT INT8 & \up{5.05} & 2.3\,MB\\
+				CPU LiteRT FP32 & 4.40 & 7.1\,MB\\
+				\bottomrule
+			\end{tabular}
+
+			\vspace{0.6\baselineskip}
+			\begin{itemize}
+				\item Meets the \textbf{5\,FPS} target on CPU and clears it $5.4\times$ on the NPU.
+				\item Peak memory $<$50\,MB, no swap, no thermal throttling.
+				\item INT8 is \emph{faster} than FP32 here, from narrower kernels and less bandwidth.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.54\linewidth}
+			\centering
+			\includegraphics[width=\linewidth, height=0.7\textheight, keepaspectratio]{webapp_live_demo.png}\\[2pt]
+			{\small\textcolor{ICLBlue}{\textbf{$\blacktriangleright$ Live demo (switch to video)}}}\\[1pt]
+			{\tiny\textcolor{ICLBlue}{Live on-device web app: NIR, translated RGB and a live RGB reference segmented side by side on the Pi.}}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	12. LIMITATIONS (honesty)
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{Limitations}
+
+	\begin{itemize}
+		\item \textbf{Behaviour, not accuracy.} Reference outputs are the frozen models' own RGB predictions (pseudo-labels), not human annotations.
+		\item \textbf{People untested.} Privacy-by-design excluded close-range faces, and \emph{person} is already among the weakest segmentation classes.
+		\item \textbf{Geographically narrow.} Outdoor London only, one rig and one sensor.
+		\item \textbf{Trained on sharp frames only.} Blurred and motion-corrupted captures were filtered out, so quality degrades on blurry or noisy input.
+	\end{itemize}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	13. CONCLUSION
+%----------------------------------------------------------------------------------------
+
+\begin{frame}
+	\frametitle{Conclusion}
+
+	\vspace{0.6\baselineskip}
+	\begin{beamercolorbox}[wd=0.92\linewidth, sep=10pt, rounded=true]{keymsg}
+		\centering Pixel fidelity does \textbf{not} predict downstream usefulness. What recovers behaviour
+		is training and evaluating in the models' own feature spaces.
+	\end{beamercolorbox}
+
+	\vspace{0.6\baselineskip}
+	Three contributions, new in combination:
+	\begin{enumerate}
+		\item A \textbf{shared-aperture rig} giving \textbf{12{,}536} simultaneously-aligned NIR/RGB pairs, which no public dataset offers.
+		\item The \textbf{first use of NAFNet for NIR$\to$RGB}, with a \textbf{foundation-feature ensemble} replacing the perceptual loss.
+		\item Distilled to a \textbf{1.7\,M} student ($67\times$ smaller) running real-time on the Pi: \textbf{5.05\,FPS} CPU, \textbf{27.2\,FPS} NPU.
+	\end{enumerate}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	CLOSING SLIDE
+%----------------------------------------------------------------------------------------
+
+\begingroup
+	\setbeamercolor{normal text}{fg=ICLBlue}\usebeamercolor[fg]{normal text}
+	\setbeamertemplate{closing slide logo}[logo]{ICL_Logo_Blue.pdf}
+	\setbeamertemplate{closing slide text}[text]{Thank you.\\ Questions?}
+	\usebeamertemplate{closing slide}
+\endgroup
+
+%----------------------------------------------------------------------------------------
+%	BACKUP SLIDES (for Q&A; not part of the 15-minute talk)
+%----------------------------------------------------------------------------------------
+
+\begingroup
+	\setbeamercolor{background canvas}{bg=ICLBlue}
+	\setbeamercolor{normal text}{fg=white}\usebeamercolor[fg]{normal text}
+	\setbeamercolor{page number in head/foot}{fg=white}
+	\begin{frame}[plain]
+		\vfill
+		\centering{\Huge\textbf{Backup slides}}
+		\vfill
+	\end{frame}
+\endgroup
+
+\begin{frame}
+	\frametitle{Backup: image-quality metrics}
+	\framesubtitle{Why these alone would have misled}
+
+	\centering
+	\small
+	\begin{tabular}{L{0.30\linewidth} C{0.14\linewidth} C{0.14\linewidth} C{0.14\linewidth} C{0.14\linewidth}}
+		\toprule
+		\textbf{Model} & \textbf{PSNR$\uparrow$} & \textbf{SSIM$\uparrow$} & \textbf{LPIPS$\downarrow$} & \textbf{Params}\\
+		\midrule
+		Raw NIR        & 16.65 & 0.656 & 0.337 & n/a\\
+		Pix2Pix        & 24.03 & 0.752 & 0.185 & 54.4\,M\\
+		Teacher        & 26.16 & 0.818 & 0.103 & 116\,M\\
+		Student FP32   & 24.09 & 0.781 & 0.146 & 1.7\,M\\
+		Student INT8   & 23.57 & 0.770 & 0.153 & 1.7\,M\\
+		\bottomrule
+	\end{tabular}
+
+	\vspace{0.5\baselineskip}
+	{\small Pix2Pix and the student are level on pixel metrics. The downstream split (previous table) is the deciding evidence.}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Backup: embedding agreement (all probes)}
+	\framesubtitle{Including the training-overlapping probes the headline omits}
+
+	\centering
+	\small
+	\begin{tabular}{L{0.20\linewidth} C{0.13\linewidth} C{0.10\linewidth} C{0.12\linewidth} C{0.12\linewidth} C{0.12\linewidth}}
+		\toprule
+		\textbf{Evaluator} & \textbf{Train overlap} & \textbf{Raw} & \textbf{Student FP32} & \textbf{FP32 closure} & \textbf{INT8 closure}\\
+		\midrule
+		DINOv2-S   & \dn{Yes}     & 0.727 & 0.923 & \up{$+0.72$} & \up{$+0.69$}\\
+		CLIP-B/16  & \dn{Partial} & 0.856 & 0.929 & \up{$+0.50$} & \up{$+0.44$}\\
+		\midrule
+		DINOv2-L   & \up{No}      & 0.728 & 0.882 & \up{$+0.57$} & \up{$+0.53$}\\
+		SigLIP2    & \up{No}      & 0.883 & 0.946 & \up{$+0.54$} & \up{$+0.51$}\\
+		\bottomrule
+	\end{tabular}
+
+	\vspace{0.5\baselineskip}
+	{\footnotesize Closure $=(\text{translated}-\text{NIR})/(1-\text{NIR})$ on cosine. The two overlapping probes (top) score at least as high as the independent ones. That is consistent with recovery but is \textbf{not} independent evidence, so the headline reports only DINOv2-L and SigLIP2. Distribution-level CLIP-FID: $17.86 \rightarrow 5.50$ (FP32) $\rightarrow 6.95$ (INT8), lower is better.}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Backup: why NAFNet?}
+	\framesubtitle{Activation-free blocks $\Rightarrow$ predictable ranges $\Rightarrow$ clean INT8 / edge export}
+
+	\begin{columns}[T]
+		\begin{column}{0.52\linewidth}
+			\centering
+			\scriptsize
+			\begin{tikzpicture}[
+				op/.style={rectangle, rounded corners, draw=ICLBlue, fill=ICLBlue!8,
+					minimum width=2.6cm, minimum height=0.5cm, align=center, font=\scriptsize},
+				act/.style={rectangle, rounded corners, draw=BadRed, fill=BadRed!12,
+					minimum width=2.6cm, minimum height=0.5cm, align=center, font=\scriptsize},
+				gate/.style={rectangle, rounded corners, draw=GoodGreen, fill=GoodGreen!14,
+					minimum width=2.6cm, minimum height=0.5cm, align=center, font=\scriptsize},
+				ar/.style={-{Latex[length=1.4mm]}, ICLBlue}
+			]
+				% Standard block
+				\node[font=\scriptsize\bfseries] (t1) at (0,0.7) {Standard conv block};
+				\node[op]  (a1) at (0,0.1)  {$1{\times}1$ conv};
+				\node[op]  (a2) at (0,-0.55){depthwise $3{\times}3$};
+				\node[act] (a3) at (0,-1.2) {\textbf{ReLU / GELU}};
+				\node[op]  (a4) at (0,-1.85){$1{\times}1$ conv};
+				\draw[ar](a1)--(a2); \draw[ar](a2)--(a3); \draw[ar](a3)--(a4);
+				% NAFBlock
+				\node[font=\scriptsize\bfseries] (t2) at (3.4,0.7) {NAFBlock};
+				\node[op]   (b1) at (3.4,0.1)  {$1{\times}1$ conv $C{\to}2C$};
+				\node[op]   (b2) at (3.4,-0.55){depthwise $3{\times}3$};
+				\node[gate] (b3) at (3.4,-1.2) {\textbf{SimpleGate}};
+				\node[op]   (b4) at (3.4,-1.85){$1{\times}1$ conv};
+				\draw[ar](b1)--(b2); \draw[ar](b2)--(b3); \draw[ar](b3)--(b4);
+			\end{tikzpicture}
+
+			\vspace{0.3\baselineskip}
+			{\scriptsize SimpleGate: split channels in half, \textbf{multiply} the two halves. No nonlinear activation.}
+		\end{column}
+		\begin{column}{0.46\linewidth}
+			\textbf{Why it matters here}
+			\begin{itemize}
+				\item No saturating activations $\Rightarrow$ \textbf{predictable dynamic range}, nothing to clip-calibrate for INT8.
+				\item Small, standard operator set (conv, LayerNorm, multiply, PixelShuffle) $\Rightarrow$ \textbf{clean ONNX / LiteRT / Hailo} export.
+				\item Zero-init residual scales $\Rightarrow$ stable training at batch size 1.
+			\end{itemize}
+			{\footnotesize Non-standard choice: restoration backbones target same-modality tasks, but here it infers \emph{missing} colour.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Backup: ReLU vs SimpleGate}
+	\framesubtitle{The activation NAFNet removes, and the gate it uses instead}
+
+	\begin{columns}[T]
+		\begin{column}{0.5\linewidth}
+			\centering
+			\textbf{\small ReLU: a fixed clipping activation}\\[4pt]
+			\includegraphics[width=\linewidth, height=0.48\textheight, keepaspectratio]{act_relu_curve.png}\\[3pt]
+			{\footnotesize Bends at zero and throws away every negative value.}
+		\end{column}
+		\begin{column}{0.5\linewidth}
+			\centering
+			\textbf{\small SimpleGate: split the channels, multiply}\\[10pt]
+			\includegraphics[height=1.5cm]{act_gate_A.png}\,\raisebox{0.6cm}{$\times$}\,\includegraphics[height=1.5cm]{act_gate_B.png}\,\raisebox{0.6cm}{$=$}\,\includegraphics[height=1.5cm]{act_gate_P.png}\\[3pt]
+			{\footnotesize $A \times B$: still nonlinear, two-sided, nothing clipped. No activation function at all.}
+		\end{column}
+	\end{columns}
+
+	\vspace{0.4\baselineskip}
+	\begin{beamercolorbox}[wd=0.94\linewidth, sep=8pt, rounded=true]{keymsg}
+		\centering\footnotesize Same nonlinearity, no clipping. The value range stays predictable, which is what lets the network quantise to INT8 and export to the edge cleanly.
+	\end{beamercolorbox}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Backup: value distributions}
+	\framesubtitle{The activation choice shapes how the values are spread, which is what INT8 has to capture}
+
+	\begin{columns}[T]
+		\begin{column}{0.5\linewidth}
+			\centering
+			\textbf{\small ReLU output}\\[3pt]
+			\includegraphics[width=\linewidth, height=0.4\textheight, keepaspectratio]{act_relu_hist.png}\\[2pt]
+			{\footnotesize Half the values clipped to 0, one-sided. The range is skewed and shifts during training.}
+		\end{column}
+		\begin{column}{0.5\linewidth}
+			\centering
+			\textbf{\small SimpleGate output}\\[3pt]
+			\includegraphics[width=\linewidth, height=0.4\textheight, keepaspectratio]{act_gate_hist.png}\\[2pt]
+			{\footnotesize Smooth, symmetric, centred on 0. A stable, predictable range.}
+		\end{column}
+	\end{columns}
+
+	\vspace{0.15\baselineskip}
+	\begin{beamercolorbox}[wd=0.94\linewidth, sep=8pt, rounded=true]{keymsg}
+		\centering\footnotesize A fixed INT8 scale fits the smooth, symmetric range well, but wastes resolution on ReLU's spike and one-sided tail. That is why the activation-free network quantises with little error.
+	\end{beamercolorbox}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Backup: where the recipe generalises (and breaks)}
+	\framesubtitle{Tested on other modalities to find the boundary of the approach}
+
+	\begin{columns}[T]
+		\begin{column}{0.5\linewidth}
+			\centering
+			\includegraphics[width=\linewidth, height=0.62\textheight, keepaspectratio]{seg_kaist.png}\\[2pt]
+			{\tiny\textcolor{ICLBlue}{Thermal (KAIST): structures become segmentable in the translated output.}}
+		\end{column}
+		\begin{column}{0.48\linewidth}
+			\textbf{\up{Thermal: transfers}}
+			\begin{itemize}
+				\item Recipe applied unmodified. CLIP cosine $0.46 \rightarrow 0.92$.
+				\item Roads, vegetation and sky recover. \emph{Person} still fails (heat contrast lost).
+			\end{itemize}
+			\textbf{\dn{SAR: breaks down}}
+			\begin{itemize}
+				\item Pixel metrics collapse (PSNR 13.3, SSIM 0.12), only marginal downstream gains.
+			\end{itemize}
+			\vspace{0.2\baselineskip}
+			{\footnotesize \textbf{Boundary:} works where the modality shares spectral structure with RGB, not as a universal cross-modal adapter.}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\begin{frame}
+	\frametitle{Backup: anticipated questions}
+
+	\small
+	\begin{itemize}
+		\item \textbf{Pseudo-labels circular?} Independent probes (DINOv2-L, SigLIP2) were held out of training and still close $>0.5$.
+		\item \textbf{Why detection weaker?} Small objects and fine texture reproduce least faithfully. Segmentation and depth lean on large-scale structure.
+		\item \textbf{CLIP/DINOv2-S contaminated?} Yes, partially, so they are reported as \emph{supporting}, not primary, evidence.
+		\item \textbf{Why not diffusion?} Iterative and stochastic, so it violates the latency budget and determinism (F3).
+		\item \textbf{Why not fine-tune the downstream models?} Needs weights and labelled NIR per task, out of scope. The translator leaves them unchanged.
+	\end{itemize}
+\end{frame}
+
+\end{document}

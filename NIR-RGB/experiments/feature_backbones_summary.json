@@ -1,0 +1,38 @@
+{
+  "metric": "embedding_cosine_vs_rgb",
+  "notes": {
+    "raw_rgb": "Reference self-similarity, always 1.0 for feature-cosine models.",
+    "clip_timm": "200 test samples.",
+    "dinov2_timm": "200 test samples.",
+    "sam_timm": "20 test samples because full SAM ViT-B CPU eval was too slow."
+  },
+  "results": {
+    "clip_timm": {
+      "raw_rgb": 1.0,
+      "raw_nir": 0.5632,
+      "conv01": 0.8536,
+      "conv02": 0.8414,
+      "n_samples": 200,
+      "improvement01_vs_nir": 0.2904,
+      "improvement02_vs_nir": 0.2782
+    },
+    "dinov2_timm": {
+      "raw_rgb": 1.0,
+      "raw_nir": 0.7503,
+      "conv01": 0.9295,
+      "conv02": 0.9261,
+      "n_samples": 200,
+      "improvement01_vs_nir": 0.1792,
+      "improvement02_vs_nir": 0.1758
+    },
+    "sam_timm": {
+      "raw_rgb": 1.0,
+      "raw_nir": 0.9882,
+      "conv01": 0.9989,
+      "conv02": 0.9988,
+      "n_samples": 20,
+      "improvement01_vs_nir": 0.0107,
+      "improvement02_vs_nir": 0.0106
+    }
+  }
+}

@@ -1,0 +1,98 @@
+project:
+  name: sar2rgb
+  experiment: whu_sar_vv_ablation_08_scratch_200
+  output_dir: experiments
+
+data:
+  nir_dir: data/whu-sen-city-paper-vv-18000/sar
+  rgb_dir: data/whu-sen-city-paper-vv-18000/rgb
+  mp_cache: null
+  extensions: [.png, .jpg, .jpeg, .tif, .tiff]
+  image_size: 256
+  in_channels: 3
+  out_channels: 3
+
+split:
+  # Paper-style split: 15,000 train and 3,000 held-out test/val patches.
+  # `scene_regex` groups generated train_* and test_* filenames so the split is fixed.
+  train_ratio: 0.5
+  val_ratio: 0.5
+  test_ratio: 0.0
+  seed: 1
+  scene_regex: "^(train|test)"
+
+augment:
+  hflip: true
+  rotate_max_deg: 10.0
+  scale_min: 0.9
+  scale_max: 1.15
+  nir_brightness: 0.2
+  nir_gamma_min: 0.8
+  nir_gamma_max: 1.2
+
+model:
+  generator:
+    type: nafnet
+    width: 64
+    enc_blk_nums: [2, 2, 4, 8]
+    middle_blk_num: 12
+    dec_blk_nums: [2, 2, 2, 2]
+    dropout: 0.0
+    global_residual: false
+    output_tanh: true
+  discriminator:
+    type: patchgan
+    base_channels: 64
+    n_layers: 3
+
+loss:
+  # Ablation 08 method: frozen foundation-model feature matching, no GAN/VGG,
+  # tiny L1 only as anti-collapse anchor.
+  l1_weight: 5.0
+  perceptual_weight: 0.0
+  gan_weight: 0.0
+  msssim_weight: 0.0
+  region_l1_boost: 1.0
+  perceptual_layers: [3, 8, 15, 22]
+  gan_type: lsgan
+  feature_map_warmup_epochs: 0
+  feature_map_input_size: 224
+  feature_map_extractors:
+  - name: dinov2_vits14
+    weight: 40.0
+  - name: clip_vitb32
+    weight: 20.0
+  - name: resnet50
+    weight: 5.0
+
+optim:
+  generator:
+    lr: 2.0e-05
+    betas: [0.9, 0.99]
+  discriminator:
+    lr: 2.0e-05
+    betas: [0.5, 0.999]
+
+train:
+  batch_size: 1
+  grad_accum: 2
+  num_workers: 4
+  epochs: 200
+  amp: false
+  log_interval: 50
+  val_interval_epochs: 1
+  save_interval_epochs: 10
+  keep_last_checkpoints: 3
+  sample_count: 8
+  grad_clip: 0.5
+  resume: null
+  resume_mode: weights_only
+  best_metric: val/clip_cos
+  best_metric_mode: max
+  seed: 8065
+
+eval:
+  metrics: [psnr, ssim, lpips]
+  lpips_net: alex
+
+device: cuda

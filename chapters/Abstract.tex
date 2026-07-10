@@ -1,0 +1,20 @@
+Modern vision models are trained almost entirely on visible-band RGB imagery and degrade badly on near-infrared (NIR) input, where colour is absent and material appearance changes. Retraining every downstream model on NIR data is rarely practical. This project instead develops an NIR-to-RGB translator that sits between the NIR sensor and an unmodified, frozen RGB model, and judges it by a stricter criterion than image quality: how much of each frozen model's native-RGB behaviour the translation recovers.
+
+To obtain supervision, a shared-aperture beam-splitter rig built around a Raspberry~Pi captured 12{,}536 simultaneous, homography-aligned NIR/RGB pairs across London. On this data a 116\,M-parameter NAFNet teacher is trained with feature-matching losses against frozen foundation models (DINOv2, CLIP and ResNet-50) in place of the conventional single perceptual term, then distilled into a 1.7\,M-parameter student, a 67.3$\times$ reduction, and exported as a deterministic 2.3\,MB mixed-INT8 LiteRT artefact. Both the student and its quantised export achieve positive gap closure on all five primary downstream tasks spanning detection, segmentation and depth, and the deployed student runs at 5.05\,FPS on the Raspberry~Pi~5 CPU and 27.2\,FPS on its Hailo-8L accelerator, meeting the 5\,FPS real-time target. A Pix2Pix baseline that matches the student on PSNR and SSIM recovers almost none of this downstream behaviour, showing that feature-space supervision and behaviour-centred evaluation, not pixel fidelity, are what make a translation pre-processor useful.
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DO NOT MODIFY FROM HERE ...
+\cleardoublepage\phantomsection
+
+\addcontentsline{toc}{chapter}{Plain Language Summary}\mtcaddchapter 
+\chapter*{Plain Language Summary}
+\addtocounter{counter}{-1}
+% ... TO HERE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Infrared cameras can see in conditions where ordinary cameras struggle, such as darkness, but the pictures they take look strange: colour is missing, and familiar things like trees and skin take on an unusual brightness. Most image-recognition software is built around ordinary colour photographs, so it performs poorly on infrared pictures.
+
+This project built a translator that turns infrared pictures into natural-looking colour pictures, so that existing recognition software can use them without being rebuilt. To teach it, a custom camera unit was designed that photographs the same scene in infrared and in colour at exactly the same instant, and over 12{,}500 matched picture pairs were collected around London. The translator was first trained at full size, then compressed until it was small enough to run several times a second on a Raspberry~Pi 5, a cheap credit-card-sized computer. In testing, software that finds objects, labels regions of a scene or judges distance worked considerably better on the translated pictures than on the raw infrared ones.

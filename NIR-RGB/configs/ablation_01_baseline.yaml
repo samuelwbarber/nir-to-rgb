@@ -1,0 +1,96 @@
+project:
+  name: nir2rgb
+  experiment: ablation_01_baseline
+  output_dir: experiments
+data:
+  nir_dir: data/nir
+  rgb_dir: data/rgb
+  mp_cache: null              # ABLATION: smartcrop OFF (no mp_cache → no crop_bbox, no region_bbox mask)
+  extensions:
+  - .png
+  - .jpg
+  - .jpeg
+  - .tif
+  - .tiff
+  image_size: 256
+  in_channels: 3
+  out_channels: 3
+split:
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  seed: 42
+  scene_regex: null
+augment:
+  hflip: true
+  rotate_max_deg: 10.0
+  scale_min: 0.9
+  scale_max: 1.15
+  nir_brightness: 0.2
+  nir_gamma_min: 0.8
+  nir_gamma_max: 1.2
+model:
+  generator:
+    type: nafnet
+    width: 64
+    enc_blk_nums:
+    - 2
+    - 2
+    - 4
+    - 8
+    middle_blk_num: 12
+    dec_blk_nums:
+    - 2
+    - 2
+    - 2
+    - 2
+    dropout: 0.0
+    global_residual: false
+    output_tanh: true
+  discriminator:
+    type: patchgan
+    base_channels: 64
+    n_layers: 3
+loss:
+  l1_weight: 100.0
+  perceptual_weight: 20.0
+  gan_weight: 0.5
+  msssim_weight: 3.0
+  region_l1_boost: 1.0        # ABLATION: region-weighted L1 OFF (1.0 = uniform L1)
+  perceptual_layers:
+  - 3
+  - 8
+  - 15
+  - 22
+  gan_type: lsgan
+optim:
+  generator:
+    lr: 0.00005
+    betas:
+    - 0.9
+    - 0.9
+  discriminator:
+    lr: 0.00005
+    betas:
+    - 0.5
+    - 0.999
+train:
+  batch_size: 2               # T4 16GB safety (prior fp32 batch=4 tuned for 24GB)
+  num_workers: 4
+  epochs: 30
+  amp: true                   # fp16 on T4 Tensor Cores (~1.5-2x speedup vs fp32). 30-epoch runs well clear of late-stage fp16 NaN seen at epoch ~185 previously.
+  log_interval: 50
+  val_interval_epochs: 1
+  save_interval_epochs: 5
+  keep_last_checkpoints: 3
+  sample_count: 8
+  grad_clip: 1.0
+  resume: checkpoints_seed/phase2_latest.pth   # shared start point across all 4 ablations (phase2 plain NAFNet64, ~170 epochs, no smartcrop/region/grad features)
+  resume_mode: weights_only                    # load G/D weights only; fresh opts/scaler so each ablation diverges only from its loss change
+eval:
+  metrics:
+  - psnr
+  - ssim
+  - lpips
+  lpips_net: alex
+device: cuda

@@ -1,0 +1,6 @@
+model,epoch,n,dinov2_cos_mean,dinov2_cos_std,cs_miou_mean,cs_miou_std
+ablation_01_baseline,25,1255,0.931963,0.084326,0.438068,0.187699
+ablation_02_smartcrop,28,1255,0.928345,0.086230,0.435544,0.189964
+ablation_03_region_l1_l1max_50,49,1255,0.931425,0.084033,0.437725,0.188919
+ablation_04_nir_grad_l1max_50,47,1255,0.934205,0.082364,0.438778,0.187295
+ablation_06_featuremap_diverse_50_ganoff_from_best,14,1255,0.945135,0.066971,0.434483,0.186538

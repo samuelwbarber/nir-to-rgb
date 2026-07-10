@@ -1,0 +1,20 @@
+% Conclusions chapter. Title is overridden via \conclusions{...} in main.tex.
+\label{ch:conclusions}
+
+\section{Conclusions}
+\label{sec:conclusions_summary}
+
+This project set out to let frozen RGB-pretrained vision models run on near-infrared input without retraining, by placing a learned NIR$\rightarrow$RGB translator in front of them and making that translator small enough to run in real time on a Raspberry~Pi~5. The success criteria set in Chapter~\ref{ch:requirements} were all met.
+
+A bespoke shared-aperture rig captured 12{,}536 closely aligned NIR/RGB pairs of London streets, removing the content mismatch that makes the public paired datasets unsuitable for supervised translation. On this data, a 116\,M-parameter NAFNet teacher was trained with a foundation-model feature-matching ensemble (DINOv2, CLIP and ResNet-50) in place of the conventional single perceptual term, and a 1.7\,M-parameter student was distilled from it and exported to a deterministic 2.3\,MB mixed-INT8 artefact, a $67.3\times$ parameter reduction. On the held-out test split, both the student and its quantised export achieve positive gap closure on all five primary downstream tasks, two detectors, two segmentation distributions and depth, as well as on the independent DINOv2-L and SigLIP2 embedding probes. On the device, the deployed student runs at 5.05\,FPS on the Pi's CPU and 27.2\,FPS on the Hailo-8L accelerator, both meeting the 5\,FPS target, with no swap or thermal throttling.
+
+The main methodological finding is that pixel fidelity does not predict downstream usefulness. The Pix2Pix baseline matches the student on PSNR and SSIM yet recovers almost none of the frozen models' native-RGB behaviour, while the feature-supervised models recover most of it. Training against, selecting by and evaluating in the feature spaces the downstream models actually use is the primary reason the system recovers downstream behaviour. These results carry the caveats stated throughout the report: they measure behavioural agreement with native-RGB model outputs rather than accuracy against human labels, and they are established on outdoor urban scenes in London.
+
+\section{Further Work}
+\label{sec:conclusions_further_work}
+
+The first gap is temporal consistency. The evaluation treats each frame independently, but a deployed translator would run on continuous video, where even a deterministic per-frame model can flicker as small input changes produce visibly different colourisations. Future work should measure frame-to-frame stability, for example by comparing optical flow between raw NIR and translated RGB, and could add a temporal smoothness penalty between consecutive outputs during training. Stable motion matters for downstream tasks such as tracking, action recognition and gait analysis.
+
+The second gap is person-centric evaluation. The dataset deliberately excluded faces and identifying features to protect privacy, so translation fidelity on people, already among the weakest segmentation classes, is untested. A separate, ethically governed collection with consented close-range capture of faces, hands and full-body poses would allow evaluation on face recognition, gait recognition, person re-identification and hand analysis.
+
+Finally, quantisation-aware training should replace the current post-training quantisation. The mixed-INT8 model loses measurable quality, most visibly on depth estimation and the distribution-level metrics, and QAT would likely recover some of that loss at the same 2.3\,MB footprint.
