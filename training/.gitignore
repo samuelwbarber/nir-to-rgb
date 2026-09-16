@@ -1,0 +1,17 @@
+# Local paired datasets and derived caches; retain directory placeholders.
+/data/*
+!/data/nir/
+!/data/rgb/
+/data/nir/*
+/data/rgb/*
+!/data/nir/.gitkeep
+!/data/rgb/.gitkeep
+
+# New run outputs are local. Already tracked evaluation evidence stays tracked.
+/experiments/*
+/wandb/
+/logs/
+*.log.*
+*.pth.*
+*.pt.*
+*.ckpt.*

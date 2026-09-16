@@ -1,0 +1,16 @@
+torch>=2.2.0
+torchvision>=0.17.0
+numpy>=1.26.0
+opencv-python>=4.8.0
+pytorch-msssim>=1.0.0
+lpips>=0.1.4
+pyyaml>=6.0
+tqdm>=4.65.0
+tensorboard>=2.15.0
+onnx>=1.15.0
+onnxruntime>=1.17.0
+pillow>=10.0.0
+
+# Frozen feature encoders used by the report teacher and selected student
+timm>=1.0.0
+transformers>=4.38.0

@@ -6,7 +6,8 @@
 
 Samuel Barber · Supervisor: Prof. Cong Ling
 
-[![Report](https://img.shields.io/badge/report-main.pdf-b31b1b)](main.pdf)
+[![Report](https://img.shields.io/badge/report-main.pdf-b31b1b)](report/main.pdf)
+[![Slides](https://img.shields.io/badge/presentation-27%20slides-0057b8)](presentation/slides.pdf)
 [![Paper](https://img.shields.io/badge/paper-WACV%20draft-1f6feb)](paper/wacv2027_draft.pdf)
 [![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey)](LICENSE.md)
 ![Python](https://img.shields.io/badge/python-3.11-3776ab)
@@ -51,8 +52,8 @@ pairs.
 
 <table>
 <tr>
-<td width="50%"><img src="imgs/device-labeled.png" alt="Annotated internals of the capture rig" width="100%"></td>
-<td width="50%"><img src="imgs/rig-deployed.jpg" alt="The rig deployed on a backpack during a capture walk" width="100%"></td>
+<td width="50%"><img src="report/imgs/device-labeled.png" alt="Annotated internals of the capture rig" width="100%"></td>
+<td width="50%"><img src="report/imgs/rig-deployed.jpg" alt="The rig deployed on a backpack during a capture walk" width="100%"></td>
 </tr>
 <tr>
 <td align="center"><em>Internals: beam-splitter cube, 850 nm NIR camera, RGB camera, 3D-printed case.</em></td>
@@ -64,32 +65,22 @@ After capture, pairs are blur-filtered and **SIFT/RANSAC homography-aligned** so
 share a pixel grid:
 
 <div align="center">
-<img src="NIR-RGB/docs/figures/dataset_pixel_pairs.png" alt="Aligned NIR/RGB training pairs, left half NIR and right half RGB" width="90%">
+<img src="report/imgs/dataset_pixel_pairs.png" alt="Aligned NIR/RGB training pairs, left half NIR and right half RGB" width="90%">
 </div>
 
 ## Repository layout
 
-```
-final-report/
-├── main.tex, chapters/, references.bib   ← the thesis (LaTeX source)
-├── main.pdf                              ← compiled report (authoritative)
-├── ic_eee_thesis.cls                     ← Imperial EEE thesis class
-│
-├── NIR-RGB/                              ← the codebase
-│   ├── src/         library: data · models (NAFNet/UNet/discriminator) · training · eval
-│   ├── scripts/     entry points: train · eval · export · benchmark
-│   ├── configs/     one YAML per experiment (teacher, students, ablations)
-│   ├── experiments/ per-run outputs + evaluation campaigns
-│   ├── eval_*.py    cross-model downstream-eval drivers
-│   └── run-*.sh     launch wrappers for each training/eval run
-│
-├── paper/                               ← condensed WACV-style paper draft
-├── Presentation_Ready/                  ← viva slides + live Pi demo video
-├── figtools/                            ← figure-generation scripts
-├── imgs/                                ← report figures
-├── pi_evidence/                         ← on-device deployment evidence
-├── hallucinator-bin/                    ← packaged demo CLI
-└── *_demo.html                          ← interactive loss / PSNR / SSIM explainers
+```text
+nir-to-rgb/
+├── report/          Final thesis PDF, LaTeX, bibliography, figures and figure tools
+├── presentation/    Final slides PDF, Beamer source, theme assets and live Pi demo
+├── training/        Model code, configs, training, evaluation and export scripts
+│   ├── src/         Data loading, NAFNet/UNet, losses, trainers and metrics
+│   ├── scripts/     Training, inference, evaluation, export and benchmarks
+│   ├── configs/     Teacher, student, baseline and ablation recipes
+│   └── experiments/ Recorded evaluation results and run provenance
+├── evidence/pi/     Raspberry Pi and Hailo benchmark records
+└── paper/           Condensed paper draft, sharing the report's bibliography
 ```
 
 ## The idea in one diagram
@@ -108,7 +99,7 @@ final-report/
 **Translation quality** — raw NIR → translated RGB → ground-truth RGB (per-pair PSNR shown):
 
 <div align="center">
-<img src="imgs/grid_22.png" alt="Raw NIR, l1boost translation, and ground-truth RGB across three street scenes" width="80%">
+<img src="report/imgs/grid_22.png" alt="Raw NIR, l1boost translation, and ground-truth RGB across three street scenes" width="80%">
 </div>
 
 **What actually matters** — how much of each *frozen* RGB model's native behaviour the
@@ -116,7 +107,7 @@ translation recovers. Blue (translated RGB) beats grey (raw NIR) on detection (Y
 Mask R-CNN), segmentation (DeepLab), depth (MiDaS), and embeddings (ResNet-50):
 
 <div align="center">
-<img src="NIR-RGB/docs/figures/downstream_gap_closure.png" alt="Downstream gap closure: translated RGB vs raw NIR across eight frozen models" width="85%">
+<img src="report/imgs/downstream_gap_closure.png" alt="Downstream gap closure: translated RGB vs raw NIR across eight frozen models" width="85%">
 </div>
 
 ## Method, briefly
@@ -134,35 +125,38 @@ Mask R-CNN), segmentation (DeepLab), depth (MiDaS), and embeddings (ResNet-50):
    model's native-RGB performance recovered on translated NIR — across detection,
    segmentation, and depth.
 
-## Reproducing the code
+## Training and reproduction
 
-```bash
-cd NIR-RGB
-python -m venv .venv && source .venv/bin/activate
-# install a CUDA-matched torch first: https://pytorch.org/get-started/locally/
-pip install -r requirements.txt
-pip install -r requirements-eval.txt      # optional downstream-eval deps
-```
+See [the training guide](training/README.md) for setup, paired-data preparation,
+teacher training, student distillation, evaluation and export commands.
 
-Key entry points (see [`NIR-RGB/README.md`](NIR-RGB/README.md) for full detail):
+- **Report teacher:** [`ablation_15b_l1boost_split42_s2.yaml`](training/configs/ablation_15b_l1boost_split42_s2.yaml).
+- **Deployed student:** [`student_l1b_c_featkd.yaml`](training/configs/student_l1b_c_featkd.yaml).
+  Its recorded teacher checkpoint is the seed-8065 L1-boost run; the guide explains
+  how to train that parent or explicitly select a different teacher.
+- **Recorded results:** [`training/experiments/`](training/experiments/), including
+  canonical evaluation, quantised-student results, ablations and robustness.
+- **Hardware evidence:** [`evidence/pi/`](evidence/pi/).
 
-- **Report teacher** — `configs/ablation_15b_l1boost_split42_s2.yaml`
-- **Deployed student** — `configs/student_l1b_c_featkd.yaml`
-- **Headline eval** — `experiments/eval_full_v4_canonical/` (canonical split),
-  `eval_full_v5_int8/` (quantised student), `robustness_v1/`
+The raw paired dataset, trained checkpoints and exported ONNX/LiteRT/HEF models
+are not included. Checkpoints and exports are stored in Weights & Biases and are
+available on request. You can train a similar model using your own aligned pairs;
+reproducing the reported numbers requires the original data and checkpoints.
 
-> **Note.** Trained checkpoints and exported artefacts (ONNX/LiteRT/HEF) and the raw image
-> dataset are intentionally **not** in this repo — they live in Weights & Biases and are
-> available on request. The compiled `main.pdf` is the authoritative description of the
-> method and results.
+## Report and presentation
 
-## Read the work
+- **[Final report](report/main.pdf)** — the authoritative thesis and results.
+- **[Presentation](presentation/slides.pdf)** — 27 slides, Samuel Barber, 25 June 2026.
+- **[Live Raspberry Pi demo](presentation/live-pi-demo.mp4)**.
+- **[Paper draft](paper/wacv2027_draft.pdf)** — condensed WACV-style version.
 
-- 📄 **[main.pdf](main.pdf)** — the full thesis
-- 📝 **[paper/wacv2027_draft.pdf](paper/wacv2027_draft.pdf)** — condensed paper version
-- 🎞️ **[Presentation_Ready/](Presentation_Ready/)** — viva slides and a live on-Pi demo video
+LaTeX sources and build instructions are in [report/](report/README.md),
+[presentation/](presentation/README.md) and [paper/](paper/README.md).
 
 ## License
 
 The written report, figures, and this documentation are licensed under
 [**CC BY-NC 4.0**](LICENSE.md). Please attribute and do not use commercially.
+
+The bundled Imperial presentation theme, logos and fonts retain their own
+[license notices](presentation/LICENSE.txt).
