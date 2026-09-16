@@ -2,7 +2,7 @@
 
 # Edge-Deployable NIR→RGB Translation as a Pre-Processor for Pre-Trained Vision Models
 
-**MEng Final-Year Project · Imperial College London · 2026 · First Class Honours**
+**MEng Final-Year Project · Imperial College London · 2026**
 
 Samuel Barber · Supervisor: Prof. Cong Ling
 
