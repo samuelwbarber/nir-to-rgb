@@ -102,13 +102,6 @@ nir-to-rgb/
 <img src="report/imgs/grid_22.png" alt="Raw NIR, l1boost translation, and ground-truth RGB across three street scenes" width="80%">
 </div>
 
-**What actually matters** — how much of each *frozen* RGB model's native behaviour the
-translation recovers. Blue (translated RGB) beats grey (raw NIR) on detection (YOLO,
-Mask R-CNN), segmentation (DeepLab), depth (MiDaS), and embeddings (ResNet-50):
-
-<div align="center">
-<img src="report/imgs/downstream_gap_closure.png" alt="Downstream gap closure: translated RGB vs raw NIR across eight frozen models" width="85%">
-</div>
 
 ## Method, briefly
 
